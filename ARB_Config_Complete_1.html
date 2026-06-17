@@ -1,0 +1,1701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Architecture Review Board — Configuration</title>
+<style>
+/* ── EXACT TOKENS FROM SCREENSHOT ─────────────────────────────────── */
+:root {
+  --page-bg:      #edf1f5;
+  --sidebar-bg:   #ffffff;
+  --sidebar-outer:#dce6f0;
+  --icon-rail:    #1a2e3d;
+  --main-bg:      #ffffff;
+  --ink:          #0d1b2a;
+  --ink-2:        #2d3f50;
+  --ink-3:        #5a6a78;
+  --ink-4:        #8a9aa8;
+  --border:       #dde5ed;
+  --border-2:     #eaf0f6;
+  --teal:         #0a7c6e;
+  --teal-dark:    #056356;
+  --teal-light:   #e8f5f3;
+  --teal-mid:     #b3ddd8;
+  --blue-nav:     #1a3a5c;
+  --green:        #1d7d4a;
+  --green-light:  #e8f5ee;
+  --green-mid:    #a8dbbe;
+  --amber:        #b45309;
+  --amber-light:  #fef3c7;
+  --red:          #c0392b;
+  --red-light:    #fdecea;
+  --purple:       #6b3fa0;
+  --purple-light: #f2ecfb;
+  --gray-f:       #f7f9fb;
+  --gray-e:       #eef2f6;
+  --active-bar:   #0a7c6e;
+  --next-btn:     #1a3a5c;
+  --r:            8px;
+  --r-lg:         12px;
+  --font:         -apple-system, 'Segoe UI', system-ui, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: var(--font); font-size: 14px; color: var(--ink); background: var(--page-bg); overflow: hidden; }
+a { color: var(--teal); text-decoration: none; }
+button { font-family: var(--font); cursor: pointer; border: none; outline: none; }
+input, textarea, select { font-family: var(--font); font-size: 13px; }
+
+/* ── LAYOUT ──────────────────────────────────────────────────────── */
+.app { display: flex; height: 100vh; overflow: hidden; }
+
+/* ── ICON RAIL ───────────────────────────────────────────────────── */
+.icon-rail {
+  width: 48px; flex-shrink: 0;
+  background: var(--icon-rail);
+  display: flex; flex-direction: column; align-items: center;
+  padding: 12px 0; gap: 4px; z-index: 10;
+}
+.ir-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,.45); font-size: 16px; cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.ir-icon:hover { background: rgba(255,255,255,.1); color: rgba(255,255,255,.8); }
+.ir-icon.active { background: rgba(255,255,255,.15); color: #fff; }
+.ir-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: #2a7a5a; color: #fff; font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  margin-top: auto; margin-bottom: 8px; cursor: pointer;
+}
+
+/* ── SIDEBAR ─────────────────────────────────────────────────────── */
+.sidebar {
+  width: 280px; flex-shrink: 0;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-header {
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sidebar-title { font-size: 15px; font-weight: 700; color: var(--ink); }
+.sidebar-icon-btn { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--ink-3); cursor: pointer; background: transparent; }
+.sidebar-icon-btn:hover { background: var(--gray-e); }
+.sidebar-nav { flex: 1; overflow-y: auto; padding: 12px 0 20px; }
+
+/* Step items */
+.nav-step {
+  display: flex; align-items: center;
+  padding: 7px 20px; cursor: pointer;
+  gap: 10px; position: relative;
+}
+.nav-step:hover { background: var(--gray-f); }
+.nav-step.active { background: var(--teal-light); }
+.nav-step.active::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; background: var(--active-bar); border-radius: 0 2px 2px 0;
+}
+.step-circle {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600;
+  border: 1.5px solid var(--border); color: var(--ink-4); background: #fff;
+}
+.step-circle.done { background: var(--green); border-color: var(--green); color: #fff; font-size: 12px; }
+.step-circle.active-c { background: #fff; border-color: var(--teal); color: var(--teal); }
+.step-circle.active-c svg { display: none; }
+.step-name { font-size: 13px; color: var(--ink-2); flex: 1; }
+.nav-step.active .step-name { color: var(--teal); font-weight: 600; }
+.nav-step.done-step .step-name { color: var(--ink-3); }
+.chevron { font-size: 10px; color: var(--ink-4); transition: transform .2s; }
+.chevron.open { transform: rotate(180deg); }
+
+/* Sub-steps */
+.sub-nav { padding-left: 52px; }
+.sub-step {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 20px 5px 0; cursor: pointer; position: relative;
+}
+.sub-step:hover .sub-name { color: var(--teal); }
+.sub-step.active { background: var(--teal-light); }
+.sub-step.active::before {
+  content: ''; position: absolute; left: -52px; right: 0; top: 0; bottom: 0;
+  background: var(--teal-light);
+}
+.sub-step.active::after {
+  content: ''; position: absolute; left: -52px; top: 0; bottom: 0;
+  width: 3px; background: var(--active-bar); border-radius: 0 2px 2px 0;
+}
+.sub-circle {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 1.5px solid var(--border); background: #fff;
+  flex-shrink: 0; position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.sub-circle.done { background: var(--green); border-color: var(--green); }
+.sub-circle.done::after { content: '✓'; font-size: 9px; color: #fff; font-weight: 700; }
+.sub-circle.active-c { border-color: var(--teal); }
+.sub-circle.active-c::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--teal); }
+.sub-name { font-size: 12px; color: var(--ink-3); position: relative; z-index: 1; }
+.sub-step.active .sub-name { color: var(--teal); font-weight: 600; }
+
+/* ── MAIN AREA ───────────────────────────────────────────────────── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+/* Top bar */
+.topbar {
+  height: 52px; flex-shrink: 0;
+  background: #fff; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 0 28px; gap: 10px;
+}
+.btn-otto {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 14px; border-radius: var(--r); font-size: 12px; font-weight: 500;
+  color: var(--ink-2); background: #fff; border: 1px solid var(--border); cursor: pointer;
+}
+.btn-otto:hover { background: var(--gray-f); }
+.btn-save {
+  padding: 6px 14px; border-radius: var(--r); font-size: 12px; font-weight: 500;
+  color: var(--ink-2); background: #fff; border: 1px solid var(--border); cursor: pointer;
+}
+.btn-save:hover { background: var(--gray-f); }
+.btn-activate {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 16px; border-radius: var(--r); font-size: 12px; font-weight: 500;
+  background: var(--gray-e); color: var(--ink-4); border: 1px solid var(--border); cursor: default;
+}
+.btn-activate.ready { background: var(--teal); color: #fff; border-color: var(--teal); cursor: pointer; }
+
+/* Scroll area */
+.content-scroll { flex: 1; overflow-y: auto; background: var(--page-bg); }
+.content-inner { max-width: 820px; margin: 0 auto; padding: 32px 40px 100px; }
+
+/* Bottom nav bar */
+.bottom-bar {
+  height: 64px; flex-shrink: 0;
+  background: #fff; border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 40px;
+}
+.btn-back {
+  display: flex; align-items: center; gap: 6px;
+  background: none; border: none; color: var(--ink-3); font-size: 13px; cursor: pointer; padding: 6px 2px;
+}
+.btn-back:hover { color: var(--ink); }
+.btn-next {
+  display: flex; align-items: center; gap: 6px;
+  padding: 9px 22px; border-radius: var(--r); font-size: 13px; font-weight: 600;
+  background: var(--next-btn); color: #fff; border: none; cursor: pointer;
+}
+.btn-next:hover { background: #0f2a45; }
+
+/* ── SECTIONS ────────────────────────────────────────────────────── */
+.section { display: none; }
+.section.active { display: block; }
+
+/* Eyebrow */
+.eyebrow { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--teal); margin-bottom: 6px; }
+/* Page title */
+.page-title { font-size: 26px; font-weight: 700; color: var(--ink); margin-bottom: 10px; line-height: 1.2; }
+/* Page desc */
+.page-desc { font-size: 14px; color: var(--ink-3); line-height: 1.6; margin-bottom: 24px; max-width: 640px; }
+
+/* Card */
+.card {
+  background: #fff; border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 20px 22px;
+  margin-bottom: 16px;
+}
+.card-title { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+.card-sub { font-size: 13px; color: var(--ink-3); margin-bottom: 14px; }
+
+/* Section label inside card */
+.slabel { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-4); margin-bottom: 10px; }
+
+/* ── TEMPLATE CARDS (Step 1) ─────────────────────────────────────── */
+.template-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.template-card {
+  background: #fff; border: 1.5px solid var(--border);
+  border-radius: var(--r-lg); padding: 20px; cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+.template-card:hover { border-color: var(--teal); box-shadow: 0 2px 12px rgba(10,124,110,.1); }
+.template-card.selected { border-color: var(--teal); background: var(--teal-light); }
+.tc-img { width: 100%; height: 80px; border-radius: var(--r); background: var(--gray-e); margin-bottom: 14px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+.tc-name { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+.tc-desc { font-size: 12px; color: var(--ink-3); line-height: 1.5; margin-bottom: 10px; }
+.tc-meta { font-size: 11px; color: var(--ink-3); line-height: 1.6; }
+.tc-meta strong { color: var(--ink-2); font-weight: 600; }
+
+/* ── FORM ELEMENTS ───────────────────────────────────────────────── */
+.fgroup { margin-bottom: 18px; }
+.flabel { font-size: 12px; font-weight: 600; color: var(--ink-2); margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
+.flabel .req { color: var(--red); }
+.flabel .opt { color: var(--ink-4); font-weight: 400; }
+.finput {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--border);
+  border-radius: var(--r); font-size: 13px; color: var(--ink);
+  background: #fff; transition: border-color .12s;
+}
+.finput:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(10,124,110,.1); }
+textarea.finput { resize: vertical; min-height: 72px; line-height: 1.5; }
+.fhint { font-size: 11px; color: var(--ink-4); margin-top: 4px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.span2 { grid-column: 1 / -1; }
+
+/* ── MEMBER CHIPS ────────────────────────────────────────────────── */
+.member-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.member-chip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px 4px 5px; border: 1px solid var(--border);
+  border-radius: 20px; font-size: 12px; color: var(--ink-2); background: #fff;
+}
+.mav { width: 22px; height: 22px; border-radius: 50%; background: var(--teal); color: #fff; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.mav.b { background: #4a6fa5; }
+.mav.c { background: #7a4a9e; }
+.mav.d { background: #3d8a5e; }
+.mav.e { background: #b06030; }
+
+/* ── APPROVAL RADIO CARDS ────────────────────────────────────────── */
+.approval-options { display: flex; flex-direction: column; gap: 6px; }
+.ap-opt {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 14px; border: 1.5px solid var(--border);
+  border-radius: var(--r); cursor: pointer; transition: border-color .12s;
+}
+.ap-opt:hover { border-color: var(--teal-mid); }
+.ap-opt.selected { border-color: var(--teal); background: var(--teal-light); }
+.ap-opt input { margin-top: 2px; flex-shrink: 0; accent-color: var(--teal); }
+.ap-label { font-size: 13px; font-weight: 600; color: var(--ink); }
+.ap-sub { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+
+/* ── FIELD ROWS ──────────────────────────────────────────────────── */
+.field-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border: 1px solid var(--border);
+  border-radius: var(--r); background: #fff; margin-bottom: 6px;
+}
+.drag-h { color: var(--ink-4); cursor: grab; font-size: 14px; flex-shrink: 0; }
+.field-name { font-size: 13px; font-weight: 600; color: var(--ink); flex: 1; }
+.field-type { font-size: 11px; color: var(--ink-4); margin-top: 1px; }
+.badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.b-green { background: var(--green-light); color: var(--green); }
+.b-gray  { background: var(--gray-e);       color: var(--ink-3); }
+.b-teal  { background: var(--teal-light);   color: var(--teal); }
+.b-amber { background: var(--amber-light);  color: var(--amber); }
+.b-red   { background: var(--red-light);    color: var(--red); }
+.b-purple{ background: var(--purple-light); color: var(--purple); }
+.icon-btn { width: 28px; height: 28px; border-radius: 6px; border: none; background: transparent; color: var(--ink-4); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.icon-btn:hover { background: var(--gray-e); color: var(--ink-2); }
+
+/* ── FILE ROWS (standards) ───────────────────────────────────────── */
+.file-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border: 1px solid var(--border);
+  border-radius: var(--r); background: #fff; margin-bottom: 8px;
+}
+.file-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--red-light); display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 16px; color: var(--red);
+}
+.file-icon.doc-blue { background: #e8f0fc; color: #2a5fbf; }
+.file-icon.doc-green{ background: var(--green-light); color: var(--green); }
+.file-name  { font-size: 13px; font-weight: 600; color: var(--ink); }
+.file-meta  { font-size: 11px; color: var(--ink-4); margin-top: 2px; }
+.file-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+/* ── TOGGLE ──────────────────────────────────────────────────────── */
+.toggle-wrap { display: flex; align-items: center; gap: 10px; }
+.sw { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+.sw input { opacity: 0; width: 0; height: 0; }
+.sw-track { position: absolute; inset: 0; background: var(--border); border-radius: 12px; cursor: pointer; transition: background .2s; }
+.sw input:checked + .sw-track { background: var(--teal); }
+.sw-thumb { position: absolute; left: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: transform .2s; pointer-events: none; }
+.sw input:checked ~ .sw-thumb { transform: translateX(18px); }
+.toggle-label { font-size: 13px; color: var(--ink-2); }
+
+/* ── CHECK / RADIO ROWS ──────────────────────────────────────────── */
+.cr { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: var(--r); cursor: pointer; }
+.cr:hover { background: var(--gray-f); }
+.cr input { margin-top: 2px; accent-color: var(--teal); flex-shrink: 0; }
+.cr-label { font-size: 13px; color: var(--ink-2); }
+.cr-sub   { font-size: 11px; color: var(--ink-4); margin-top: 2px; }
+.cr.sel   { background: var(--teal-light); }
+.cr.sel .cr-label { color: var(--teal); font-weight: 500; }
+
+/* ── BUTTON STYLES ───────────────────────────────────────────────── */
+.btn-outline {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: var(--r); font-size: 12px; font-weight: 500;
+  border: 1px solid var(--border); background: #fff; color: var(--ink-2); cursor: pointer;
+}
+.btn-outline:hover { background: var(--gray-f); border-color: var(--ink-3); }
+.btn-upload {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 16px; border-radius: var(--r); font-size: 12px; font-weight: 500;
+  border: 1px solid var(--border); background: var(--gray-f); color: var(--ink-2); cursor: pointer;
+}
+.btn-upload:hover { background: var(--gray-e); }
+.btn-primary-sm {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 14px; border-radius: var(--r); font-size: 12px; font-weight: 500;
+  background: var(--teal); color: #fff; border: none; cursor: pointer;
+}
+.btn-primary-sm:hover { background: var(--teal-dark); }
+.btn-add-dashed {
+  display: flex; align-items: center; gap: 7px;
+  padding: 9px 12px; border-radius: var(--r); font-size: 12px; font-weight: 500;
+  border: 1.5px dashed var(--border); background: transparent; color: var(--teal); cursor: pointer;
+  width: 100%; margin-top: 8px;
+}
+.btn-add-dashed:hover { border-color: var(--teal); background: var(--teal-light); }
+
+/* ── RULE BUCKETS ────────────────────────────────────────────────── */
+.bucket { border-radius: var(--r-lg); margin-bottom: 10px; overflow: hidden; border: 1px solid var(--border); }
+.bucket-hdr {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; cursor: pointer; user-select: none;
+}
+.bh-red    { background: var(--red-light);    border-bottom: 1px solid #f5c0bb; }
+.bh-amber  { background: var(--amber-light);  border-bottom: 1px solid #f8d980; }
+.bh-green  { background: var(--green-light);  border-bottom: 1px solid var(--green-mid); }
+.b-icon { font-size: 16px; }
+.b-title { font-size: 13px; font-weight: 700; flex: 1; }
+.bh-red   .b-title { color: var(--red); }
+.bh-amber .b-title { color: var(--amber); }
+.bh-green .b-title { color: var(--green); }
+.bucket-body { background: #fff; padding: 8px; }
+.rule-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.rule-row:hover { background: var(--gray-f); }
+.rule-row input { accent-color: var(--teal); flex-shrink: 0; }
+.rule-text { font-size: 13px; color: var(--ink-2); flex: 1; }
+.prov { display: inline-flex; align-items: center; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.prov.t { background: #dff0fd; color: #1a5a8a; }
+.prov.f { background: #fef3c7; color: #854d0e; }
+.prov.s { background: #dcf5ea; color: #155d30; }
+.prov.c { background: var(--purple-light); color: var(--purple); }
+
+/* ── DIVIDER ─────────────────────────────────────────────────────── */
+.div { height: 1px; background: var(--border-2); margin: 14px 0; }
+
+/* ── INFO BOX ────────────────────────────────────────────────────── */
+.info { display: flex; gap: 10px; padding: 11px 14px; border-radius: var(--r); font-size: 12px; line-height: 1.55; margin-bottom: 14px; }
+.info.blue  { background: #e8f2fc; border: 1px solid #b8d5f5; color: #1a4a7a; }
+.info.green { background: var(--green-light); border: 1px solid var(--green-mid); color: #0d4525; }
+.info.amber { background: var(--amber-light); border: 1px solid #f0c050; color: #713f00; }
+.info.red   { background: var(--red-light); border: 1px solid #f5a8a0; color: #7a1f18; }
+.info-icon  { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+/* ── CASCADE ROWS ────────────────────────────────────────────────── */
+.casc { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--border-2); }
+.casc:last-child { border-bottom: none; }
+.casc-icon { font-size: 13px; flex-shrink: 0; }
+.casc-text { flex: 1; font-size: 12px; color: var(--ink-2); }
+
+/* ── SECTION ROW (doc template) ──────────────────────────────────── */
+.sec-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border: 1px solid var(--border);
+  border-radius: var(--r); background: #fff; margin-bottom: 6px;
+}
+.sec-name  { font-size: 13px; font-weight: 600; color: var(--ink); flex: 0 0 160px; }
+.sec-guide { font-size: 12px; color: var(--ink-4); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── NOTIFICATION ACCORDION ──────────────────────────────────────── */
+.notif-item { border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 8px; overflow: hidden; }
+.notif-hdr { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: var(--gray-f); cursor: pointer; }
+.notif-num { width: 22px; height: 22px; border-radius: 50%; background: var(--teal-light); color: var(--teal); font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.notif-name { font-size: 13px; font-weight: 600; color: var(--ink); flex: 1; }
+.notif-when { font-size: 11px; color: var(--ink-4); }
+.notif-body { padding: 16px; border-top: 1px solid var(--border); }
+.vchip { display: inline-flex; padding: 1px 6px; background: var(--purple-light); color: var(--purple); border-radius: 3px; font-size: 11px; font-family: monospace; margin: 1px; }
+
+/* ── TEST PANEL ──────────────────────────────────────────────────── */
+.test-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.test-left, .test-right { background: #fff; border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px; }
+.test-scenario-btn { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border); background: #fff; font-size: 11px; color: var(--ink-2); cursor: pointer; width: 100%; margin-bottom: 4px; }
+.test-scenario-btn:hover { background: var(--gray-f); }
+.vt-btn { padding: 4px 12px; border-radius: var(--r); font-size: 11px; font-weight: 600; border: 1px solid var(--border); background: #fff; color: var(--ink-3); cursor: pointer; }
+.vt-btn.active { background: var(--teal); color: #fff; border-color: var(--teal); }
+.tf { display: flex; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--border-2); }
+.tf:last-child { border-bottom: none; }
+.tf-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+.tf-title { font-size: 12px; font-weight: 700; }
+.tf-detail { font-size: 11px; color: var(--ink-3); margin-top: 2px; line-height: 1.4; }
+.td-box { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: var(--r); margin-bottom: 12px; }
+.td-box.rej { background: var(--red-light); border: 1px solid #f5a8a0; }
+.td-box.app { background: var(--green-light); border: 1px solid var(--green-mid); }
+.td-box.brd { background: var(--amber-light); border: 1px solid #f0c050; }
+
+/* ── ACTIVATE PANEL ──────────────────────────────────────────────── */
+.act-panel {
+  background: linear-gradient(135deg, #0f2d45 0%, #0a7c6e 100%);
+  border-radius: var(--r-lg); padding: 24px; color: #fff; margin-bottom: 20px;
+}
+.act-panel h3 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+.act-panel p  { font-size: 13px; opacity: .75; margin-bottom: 16px; }
+.act-actions  { display: flex; gap: 10px; align-items: center; }
+.btn-act-main { background: #fff; color: #0f2d45; font-weight: 700; padding: 10px 22px; border-radius: var(--r); border: none; cursor: pointer; font-size: 13px; opacity: .4; }
+.btn-act-main.ready { opacity: 1; }
+.btn-act-draft { background: rgba(255,255,255,.15); color: #fff; font-weight: 500; padding: 10px 18px; border-radius: var(--r); border: 1.5px solid rgba(255,255,255,.3); cursor: pointer; font-size: 13px; }
+.act-hint { font-size: 11px; opacity: .55; margin-top: 10px; }
+
+/* ── DECISION SUMMARY (Step 7) ───────────────────────────────────── */
+.ds-block { border-radius: var(--r-lg); overflow: hidden; margin-bottom: 10px; }
+.ds-hdr { display: flex; align-items: center; gap: 10px; padding: 11px 16px; }
+.ds-hdr.r { background: var(--red-light); border: 1px solid #f5a8a0; border-bottom: none; border-radius: var(--r-lg) var(--r-lg) 0 0; }
+.ds-hdr.a { background: var(--amber-light); border: 1px solid #f0c050; border-bottom: none; border-radius: var(--r-lg) var(--r-lg) 0 0; }
+.ds-hdr.g { background: var(--green-light); border: 1px solid var(--green-mid); border-bottom: none; border-radius: var(--r-lg) var(--r-lg) 0 0; }
+.ds-hdr-title { font-size: 13px; font-weight: 700; flex: 1; }
+.ds-hdr.r .ds-hdr-title { color: var(--red); }
+.ds-hdr.a .ds-hdr-title { color: var(--amber); }
+.ds-hdr.g .ds-hdr-title { color: var(--green); }
+.ds-body { background: #fff; border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--r-lg) var(--r-lg); padding: 4px 8px; }
+.ds-row { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-bottom: 1px solid var(--border-2); cursor: pointer; }
+.ds-row:last-child { border-bottom: none; }
+.ds-row:hover { background: var(--gray-f); }
+.ds-icon { font-size: 12px; flex-shrink: 0; }
+.ds-text { font-size: 12px; color: var(--ink-2); flex: 1; }
+.ds-link { font-size: 11px; color: var(--teal); opacity: 0; transition: opacity .1s; }
+.ds-row:hover .ds-link { opacity: 1; }
+
+/* ── INLINE NUM ───────────────────────────────────────────────────── */
+.inline-n { display: flex; align-items: center; gap: 8px; }
+.inline-n input { width: 72px; text-align: center; }
+.inline-n span { font-size: 12px; color: var(--ink-3); }
+
+/* ── STATE LABELS ────────────────────────────────────────────────── */
+.state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.state-item { }
+.state-db { font-size: 10px; color: var(--ink-4); margin-bottom: 3px; text-transform: uppercase; letter-spacing: .4px; }
+
+/* ── PLAIN TEXT INPUT BOX ─────────────────────────────────────────── */
+.plain-box { background: var(--gray-f); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 16px; margin-top: 14px; }
+.plain-box-label { font-size: 11px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+
+/* ── TIER PIPELINE (Step 3) ──────────────────────────────────────── */
+.tier-pipeline { display: flex; flex-direction: column; }
+.tier-card { background: #fff; border: 1.5px solid var(--border); border-radius: var(--r-lg); padding: 18px 20px; transition: border-color .15s; }
+.tier-card.final-tier { border-color: var(--teal); border-width: 2px; }
+.tier-connector { display: flex; flex-direction: column; align-items: center; padding: 2px 0; }
+.tier-connector-line { width: 2px; height: 20px; background: var(--border); }
+.tier-connector-arrow { color: var(--ink-4); font-size: 13px; line-height: 1; }
+.tier-badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; background: var(--gray-e); color: var(--ink-3); margin-bottom: 12px; }
+.tier-badge.t1 { background: var(--teal-light); color: var(--teal); }
+.tier-badge.t2 { background: #e8f0fc; color: #2a5fa0; }
+.tier-badge.t3 { background: var(--purple-light); color: var(--purple); }
+.tier-badge.tf { background: var(--green-light); color: var(--green); }
+.tier-divider { height: 1px; background: var(--border-2); margin: 14px 0; }
+.tier-section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--ink-4); margin-bottom: 8px; }
+.tier-remove { color: var(--ink-4); font-size: 12px; cursor: pointer; padding: 4px 8px; border-radius: var(--r); border: 1px solid var(--border); background: #fff; }
+.tier-remove:hover { color: var(--red); border-color: var(--red); background: var(--red-light); }
+/* Toggle row — enhanced for tier settings */
+.toggle-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: var(--gray-f); border: 1px solid var(--border); border-radius: var(--r); margin-bottom: 8px; }
+.toggle-row.teal-bg { background: var(--teal-light); border-color: var(--teal-mid); }
+.toggle-info .toggle-label { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
+.toggle-info .toggle-desc { font-size: 12px; color: var(--ink-3); line-height: 1.5; }
+/* Section rows — expandable (Step 4.2) */
+.sec-row { border: 1px solid var(--border); border-radius: var(--r); background: #fff; margin-bottom: 8px; overflow: hidden; }
+.sec-row-header { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; }
+.sec-row-header:hover { background: var(--gray-f); }
+.sec-row.expanded .sec-row-header { background: var(--teal-light); border-bottom: 1px solid var(--teal-mid); }
+.sec-expand-body { padding: 14px 14px 14px 36px; }
+.sec-name-display { font-size: 13px; font-weight: 600; color: var(--ink); flex: 1; }
+.sec-guide-preview { font-size: 12px; color: var(--ink-4); flex: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sec-cascade-note { font-size: 11px; font-weight: 600; margin-top: 10px; padding: 7px 10px; border-radius: var(--r); display: flex; align-items: flex-start; gap: 6px; background: var(--teal-light); color: var(--teal); }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ── ICON RAIL ───────────────────────────────────────────────── -->
+<div class="icon-rail">
+  <div class="ir-icon">☰</div>
+  <div class="ir-icon">🏠</div>
+  <div class="ir-icon">🕐</div>
+  <div class="ir-icon">🔔</div>
+  <div class="ir-icon">⚙</div>
+  <div class="ir-icon active" style="background:rgba(255,255,255,.15);">🚀</div>
+  <div class="ir-icon">📋</div>
+  <div class="ir-icon">⚙</div>
+  <div class="ir-avatar">SC</div>
+</div>
+
+<!-- ── SIDEBAR ──────────────────────────────────────────────────── -->
+<div class="sidebar">
+  <div class="sidebar-header">
+    <span class="sidebar-title">Configure ARB</span>
+    <button class="sidebar-icon-btn">⊙</button>
+  </div>
+  <nav class="sidebar-nav" id="sidebar-nav">
+
+    <div class="nav-step done-step" onclick="show('s1')">
+      <div class="step-circle done">✓</div>
+      <span class="step-name">1. Choose template</span>
+    </div>
+
+    <div class="nav-step done-step" onclick="show('s2')">
+      <div class="step-circle done">✓</div>
+      <span class="step-name">2. ARB type basics</span>
+    </div>
+
+    <div class="nav-step done-step" onclick="show('s3')">
+      <div class="step-circle done">✓</div>
+      <span class="step-name">3. Define approval board</span>
+    </div>
+
+    <div class="nav-step done-step" onclick="show('s4')">
+      <div class="step-circle done">✓</div>
+      <span class="step-name">4. Configure fields</span>
+    </div>
+
+    <div class="nav-step" id="nav5" onclick="toggleStep(5)">
+      <div class="step-circle" id="sc5">5</div>
+      <span class="step-name" id="sn5">5. EA Specialist rules</span>
+      <span class="chevron open" id="ch5">▾</span>
+    </div>
+    <div class="sub-nav" id="sub5">
+      <div class="sub-step" id="nav5-1" onclick="show('s5-1')">
+        <div class="sub-circle" id="ss5-1"></div>
+        <span class="sub-name">5.1 Upload standards</span>
+      </div>
+      <div class="sub-step" id="nav5-2" onclick="show('s5-2')">
+        <div class="sub-circle" id="ss5-2"></div>
+        <span class="sub-name">5.2 Rules</span>
+      </div>
+      <div class="sub-step" id="nav5-3" onclick="show('s5-3')">
+        <div class="sub-circle" id="ss5-3"></div>
+        <span class="sub-name">5.3 Submitter assistance</span>
+      </div>
+    </div>
+
+    <div class="nav-step" id="nav6" onclick="toggleStep(6)">
+      <div class="step-circle" id="sc6">6</div>
+      <span class="step-name" id="sn6">6. SLAs, notifications &amp; lifecycle</span>
+      <span class="chevron open" id="ch6">▾</span>
+    </div>
+    <div class="sub-nav" id="sub6">
+      <div class="sub-step" id="nav6-1" onclick="show('s6-1')">
+        <div class="sub-circle" id="ss6-1"></div>
+        <span class="sub-name">6.1 SLA configuration</span>
+      </div>
+      <div class="sub-step" id="nav6-2" onclick="show('s6-2')">
+        <div class="sub-circle" id="ss6-2"></div>
+        <span class="sub-name">6.2 Condition lifecycle</span>
+      </div>
+      <div class="sub-step" id="nav6-3" onclick="show('s6-3')">
+        <div class="sub-circle" id="ss6-3"></div>
+        <span class="sub-name">6.3 Notification emails</span>
+      </div>
+    </div>
+
+    <div class="nav-step" id="nav7" onclick="show('s7')">
+      <div class="step-circle" id="sc7">7</div>
+      <span class="step-name" id="sn7">7. Review &amp; activate</span>
+    </div>
+
+  </nav>
+</div>
+
+<!-- ── MAIN ──────────────────────────────────────────────────────── -->
+<div class="main">
+  <div class="topbar">
+    <button class="btn-otto">✦ Ask Otto</button>
+    <button class="btn-save">Save &amp; exit</button>
+    <button class="btn-activate" id="top-activate">✓ Activate ARB type</button>
+  </div>
+  <div class="content-scroll">
+    <div class="content-inner">
+
+<!-- ════════════ STEP 1 ════════════════════════════════════════════ -->
+<div id="s1" class="section active">
+  <div class="eyebrow">Step 1 of 7</div>
+  <div class="page-title">How would you like to create this ARB type?</div>
+  <div class="page-desc">Start from a template to pre-fill fields, rules, and lifecycle — you can edit everything later — or build from scratch.</div>
+  <div class="template-grid">
+    <div class="template-card selected" onclick="selectTemplate(this)">
+      <div class="tc-img">🏛️</div>
+      <div class="tc-name">Architecture exception request</div>
+      <div class="tc-desc">Pre-configured for tracking temporary deviations from architecture standards.</div>
+      <div class="tc-meta"><strong>Includes:</strong> Deviation type, Mitigation plan, Expiry date · Auto-approval for low-risk + documented mitigation · Lifecycle Active → Expired → Resolved → Closed<br><strong>Best for:</strong> Technical debt, vendor workarounds, temporary exceptions with time limits</div>
+    </div>
+    <div class="template-card" onclick="selectTemplate(this)">
+      <div class="tc-img">🔍</div>
+      <div class="tc-name">Detailed technical review</div>
+      <div class="tc-desc">Pre-configured for reviewing new solutions, integrations, and technology adoption.</div>
+      <div class="tc-meta"><strong>Includes:</strong> Diagram, TRM products, Security checklist · Auto-approval for TRM-compliant + single-domain · EA Specialist precedent matching &amp; standards checking<br><strong>Best for:</strong> New applications, integrations, technology adoption, architecture changes</div>
+    </div>
+    <div class="template-card" onclick="selectTemplate(this)">
+      <div class="tc-img">🔧</div>
+      <div class="tc-name">Build from scratch</div>
+      <div class="tc-desc">Create a custom ARB type with no pre-configured settings. Only recommended if neither template fits.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ STEP 2 ════════════════════════════════════════════ -->
+<div id="s2" class="section">
+  <div class="eyebrow">Step 2 of 7</div>
+  <div class="page-title">ARB type basics</div>
+  <div class="page-desc">Give this ARB type a clear name and description. Submitters see both when choosing which review to request.</div>
+  <div class="card">
+    <div class="fgroup">
+      <div class="flabel">ARB type name <span class="req">*</span></div>
+      <input class="finput" value="Detailed Technical Review" placeholder="e.g. Architecture Exception Request">
+      <div class="fhint">5–100 characters. Must be unique. Appears in the submission form.</div>
+    </div>
+    <div class="fgroup">
+      <div class="flabel">Description <span class="opt">(optional)</span></div>
+      <textarea class="finput" rows="3">Pre-configured for reviewing new solutions, integrations, and technology adoption decisions. Covers TRM compliance, security, and cross-domain impact.</textarea>
+      <div class="fhint">Shown to submitters when selecting this ARB type. Explain when to use it.</div>
+    </div>
+    <div class="fgroup" style="margin-bottom:0;">
+      <div class="toggle-wrap">
+        <label class="sw"><input type="checkbox" checked><div class="sw-track"></div><div class="sw-thumb"></div></label>
+        <span class="toggle-label">Display to submitters</span>
+      </div>
+      <div class="fhint" style="margin-left:52px;">Uncheck to hide this ARB type while testing. Re-enable when ready.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ STEP 3 ════════════════════════════════════════════ -->
+<div id="s3" class="section">
+  <div class="eyebrow">Step 3 of 7</div>
+  <div class="page-title">Define the approval board</div>
+  <div class="page-desc">Build your approval pipeline. Each tier is a named group with a clear purpose — requests flow through tiers in order unless a tier is configured to approve and close.</div>
+  <div class="info blue"><div class="info-icon">ℹ</div><div>Conditions can be created at any tier and carry forward to all subsequent tiers. The final board sees everything flagged earlier and makes a holistic judgment. Conditions do not block escalation between tiers.</div></div>
+
+  <div class="tier-pipeline">
+
+    <!-- TIER 1 -->
+    <div class="tier-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <span class="tier-badge t1">Tier 1</span>
+        <button class="tier-remove">Remove</button>
+      </div>
+      <div class="grid2" style="margin-bottom:14px;">
+        <div class="fgroup" style="margin-bottom:0;">
+          <div class="flabel">Tier name <span class="req">*</span></div>
+          <input class="finput" value="Primary Reviewers" placeholder="e.g. Primary Reviewers">
+          <div class="fhint">Shown in request status timeline and notifications</div>
+        </div>
+        <div class="fgroup" style="margin-bottom:0;">
+          <div class="flabel">Purpose <span class="opt">(optional)</span></div>
+          <input class="finput" value="Initial triage and quality check by internal EAs" placeholder="What does this tier do?">
+          <div class="fhint">Admin-facing — not shown to submitters</div>
+        </div>
+      </div>
+      <div class="tier-divider"></div>
+      <div class="tier-section-label">Approval group</div>
+      <div class="fgroup">
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <button class="btn-outline" style="background:var(--teal-light);border-color:var(--teal);color:var(--teal);">Select existing</button>
+          <button class="btn-outline">Create new</button>
+        </div>
+        <input class="finput" value="Enterprise Architects" placeholder="Search groups…">
+        <div class="member-list" style="margin-top:8px;">
+          <div class="member-chip"><div class="mav">SC</div>Sarah Chen</div>
+          <div class="member-chip"><div class="mav b">MJ</div>Marcus Johnson</div>
+          <div class="member-chip"><div class="mav c">PP</div>Priya Patel</div>
+          <div class="member-chip"><div class="mav d">AR</div>Alex Rodriguez</div>
+          <button class="btn-outline" style="font-size:11px;padding:3px 9px;">+ Add member</button>
+        </div>
+      </div>
+      <div class="tier-divider"></div>
+      <div class="tier-section-label">Approval pattern</div>
+      <div style="margin-bottom:14px;">
+        <div class="ap-opt selected" onclick="selAp(this)"><input type="radio" name="ap1" checked><div><div class="ap-label">Any member can approve <span style="font-size:10px;font-weight:600;color:var(--teal);background:var(--teal-light);padding:1px 7px;border-radius:8px;margin-left:4px;">recommended</span></div><div class="ap-sub">First approval or rejection is final. Fastest for routine requests.</div></div></div>
+        <div class="ap-opt" onclick="selAp(this)"><input type="radio" name="ap1"><div><div class="ap-label">All members must approve</div><div class="ap-sub">Requires unanimous approval. Use for critical or high-risk reviews.</div></div></div>
+        <div class="ap-opt" onclick="selAp(this)"><input type="radio" name="ap1"><div><div class="ap-label">Majority must approve</div><div class="ap-sub">Threshold configurable (e.g. 3 of 5). Use for consensus decisions.</div></div></div>
+      </div>
+      <div class="tier-divider"></div>
+      <div class="tier-section-label">Tier settings</div>
+      <div class="toggle-row">
+        <label class="sw"><input type="checkbox"><div class="sw-track"></div><div class="sw-thumb"></div></label>
+        <div class="toggle-info"><div class="toggle-label">Require a live ARB meeting before this tier can approve</div><div class="toggle-desc">Use for high-impact or complex requests that benefit from discussion before a decision is made.</div></div>
+      </div>
+      <div class="toggle-row">
+        <label class="sw"><input type="checkbox"><div class="sw-track"></div><div class="sw-thumb"></div></label>
+        <div class="toggle-info"><div class="toggle-label">This tier can approve and close a request</div><div class="toggle-desc">Reviewers at this tier can approve a request and end the review process without escalating to further tiers. Turn off if this tier is for triage or domain review only and all requests must proceed to a higher tier.</div></div>
+      </div>
+    </div>
+
+    <div class="tier-connector"><div class="tier-connector-line"></div><div class="tier-connector-arrow">▼</div><div class="tier-connector-line"></div></div>
+
+    <!-- TIER 2 -->
+    <div class="tier-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <span class="tier-badge t2">Tier 2</span>
+        <button class="tier-remove">Remove</button>
+      </div>
+      <div class="grid2" style="margin-bottom:14px;">
+        <div class="fgroup" style="margin-bottom:0;">
+          <div class="flabel">Tier name <span class="req">*</span></div>
+          <input class="finput" value="Domain Approvers" placeholder="e.g. Domain Approvers">
+          <div class="fhint">Shown in request status timeline and notifications</div>
+        </div>
+        <div class="fgroup" style="margin-bottom:0;">
+          <div class="flabel">Purpose <span class="opt">(optional)</span></div>
+          <input class="finput" value="Domain-specific technical review by Solution Architects" placeholder="What does this tier do?">
+          <div class="fhint">Admin-facing — not shown to submitters</div>
+        </div>
+      </div>
+      <div class="tier-divider"></div>
+      <div class="tier-section-label">Approval group</div>
+      <div class="fgroup">
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <button class="btn-outline" style="background:var(--teal-light);border-color:var(--teal);color:var(--teal);">Select existing</button>
+          <button class="btn-outline">Create new</button>
+        </div>
+        <input class="finput" value="Domain Solution Architects" placeholder="Search groups…">
+        <div class="member-list" style="margin-top:8px;">
+          <div class="member-chip"><div class="mav e">HT</div>Hiroshi Tanaka</div>
+          <div class="member-chip"><div class="mav b">RK</div>Rachel Kim</div>
+          <div class="member-chip"><div class="mav">NW</div>Nora Williams</div>
+          <button class="btn-outline" style="font-size:11px;padding:3px 9px;">+ Add member</button>
+        </div>
+      </div>
+      <div class="tier-divider"></div>
+      <div class="tier-section-label">Approval pattern</div>
+      <div style="margin-bottom:14px;">
+        <div class="ap-opt selected" onclick="selAp(this)"><input type="radio" name="ap2" checked><div><div class="ap-label">Any member can approve <span style="font-size:10px;font-weight:600;color:var(--teal);background:var(--teal-light);padding:1px 7px;border-radius:8px;margin-left:4px;">recommended</span></div><div class="ap-sub">First approval or rejection is final.</div></div></div>
+        <div class="ap-opt" onclick="selAp(this)"><input type="radio" name="ap2"><div><div class="ap-label">All members must approve</div><div class="ap-sub">Requires unanimous approval.</div></div></div>
+        <div class="ap-opt" onclick="selAp(this)"><input type="radio" name="ap2"><div><div class="ap-label">Majority must approve</div><div class="ap-sub">Threshold configurable (e.g. 3 of 5).</div></div></div>
+      </div>
+      <div class="tier-divider"></div>
+      <div class="tier-section-label">Tier settings</div>
+      <div class="toggle-row">
+        <label class="sw"><input type="checkbox"><div class="sw-track"></div><div class="sw-thumb"></div></label>
+        <div class="toggle-info"><div class="toggle-label">Require a live ARB meeting before this tier can approve</div><div class="toggle-desc">Use for high-impact or complex requests that benefit from discussion before a decision is made.</div></div>
+      </div>
+      <div class="toggle-row">
+        <label class="sw"><input type="checkbox" checked><div class="sw-track"></div><div class="sw-thumb"></div></label>
+        <div class="toggle-info"><div class="toggle-label">This tier can approve and close a request</div><div class="toggle-desc">Reviewers at this tier can approve a request and end the review process without escalating further. Turn off if all requests must proceed to a higher tier.</div></div>
+      </div>
+    </div>
+
+    <div class="tier-connector"><div class="tier-connector-line"></div><div class="tier-connector-arrow">▼</div><div class="tier-connector-line"></div></div>
+
+    <!-- TIER 3 — FINAL -->
+    <div class="tier-card final-tier">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <span class="tier-badge tf">Tier 3 · Final</span>
+        <button class="tier-remove">Remove</button>
+      </div>
+      <div class="grid2" style="margin-bottom:14px;">
+        <div class="fgroup" style="margin-bottom:0;">
+          <div class="flabel">Tier name <span class="req">*</span></div>
+          <input class="finput" value="Architecture Board" placeholder="e.g. Architecture Board">
+          <div class="fhint">Shown in request status timeline and notifications</div>
+        </div>
+        <div class="fgroup" style="margin-bottom:0;">
+          <div class="flabel">Purpose <span class="opt">(optional)</span></div>
+          <input class="finput" value="Full board review for cross-domain and high-risk requests" placeholder="What does this tier do?">
+          <div class="fhint">Admin-facing — not shown to submitters</div>
+        </div>
+      </div>
+      <div class="tier-divider"></div>
+      <div class="tier-section-label">Approval group</div>
+      <div class="fgroup">
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <button class="btn-outline" style="background:var(--teal-light);border-color:var(--teal);color:var(--teal);">Select existing</button>
+          <button class="btn-outline">Create new</button>
+        </div>
+        <input class="finput" value="Architecture Review Board" placeholder="Search groups…">
+        <div class="member-list" style="margin-top:8px;">
+          <div class="member-chip"><div class="mav">DM</div>David Müller</div>
+          <div class="member-chip"><div class="mav c">LP</div>Laura Park</div>
+          <div class="member-chip"><div class="mav b">JB</div>James Bright</div>
+          <div class="member-chip"><div class="mav d">AO</div>Amara Okafor</div>
+          <div class="member-chip"><div class="mav e">SL</div>Sophie Laurent</div>
+          <button class="btn-outline" style="font-size:11px;padding:3px 9px;">+ Add member</button>
+        </div>
+      </div>
+      <div class="tier-divider"></div>
+      <div class="tier-section-label">Approval pattern</div>
+      <div style="margin-bottom:14px;">
+        <div class="ap-opt" onclick="selAp(this)"><input type="radio" name="ap3"><div><div class="ap-label">Any member can approve</div><div class="ap-sub">First approval or rejection is final.</div></div></div>
+        <div class="ap-opt selected" onclick="selAp(this)"><input type="radio" name="ap3" checked><div><div class="ap-label">All members must approve</div><div class="ap-sub">Requires unanimous approval. Recommended for the final governance board.</div></div></div>
+        <div class="ap-opt" onclick="selAp(this)"><input type="radio" name="ap3"><div><div class="ap-label">Majority must approve</div><div class="ap-sub">Threshold configurable (e.g. 3 of 5).</div></div></div>
+      </div>
+      <div class="tier-divider"></div>
+      <div class="tier-section-label">Tier settings</div>
+      <div class="toggle-row">
+        <label class="sw"><input type="checkbox" checked><div class="sw-track"></div><div class="sw-thumb"></div></label>
+        <div class="toggle-info"><div class="toggle-label">Require a live ARB meeting before this tier can approve</div><div class="toggle-desc">Use for high-impact or complex requests that benefit from discussion before a decision is made.</div></div>
+      </div>
+      <div class="toggle-row teal-bg">
+        <label class="sw"><input type="checkbox" checked disabled><div class="sw-track"></div><div class="sw-thumb"></div></label>
+        <div class="toggle-info"><div class="toggle-label">This tier can approve and close a request</div><div class="toggle-desc">This is the final tier — it always has the authority to approve and close. This setting cannot be turned off on the last tier in the pipeline.</div></div>
+      </div>
+    </div>
+
+  </div><!-- /tier-pipeline -->
+  <button class="btn-add-dashed" style="margin-top:14px;">＋ Add approval tier</button>
+</div>
+
+<!-- ════════════ STEP 4 ════════════════════════════════════════════ -->
+<div id="s4" class="section">
+  <div class="eyebrow">Step 4 of 7</div>
+  <div class="page-title">Configure fields &amp; submission template</div>
+  <div class="page-desc">Define what submitters provide — structured form fields and the document template that becomes the ARB governance artefact for detailed technical reviews.</div>
+
+  <div class="info blue"><div class="info-icon">ℹ</div><div><strong>Two distinct things.</strong> Form fields (4.1) are structured database fields submitters fill through the UI. The document template (4.2) is the section structure of the native ServiceNow document created with every request — it becomes the governance record.</div></div>
+
+  <div class="card">
+    <div class="slabel">4.1 — Form fields</div>
+    <div class="card-sub">Pre-filled from your template. Toggle required/optional, reorder, or add custom fields.</div>
+
+    <div class="field-row">
+      <span class="drag-h">⠿</span>
+      <div style="flex:1"><div class="field-name">Request title <span style="color:var(--red);font-size:11px;">*</span></div><div class="field-type">Short text · 10–100 characters</div></div>
+      <span class="badge b-green">Required</span>
+      <button class="icon-btn">✎</button>
+    </div>
+    <div class="field-row">
+      <span class="drag-h">⠿</span>
+      <div style="flex:1"><div class="field-name">Solution description <span style="color:var(--red);font-size:11px;">*</span></div><div class="field-type">Long text · min 100 chars</div></div>
+      <span class="badge b-green">Required</span>
+      <button class="icon-btn">✎</button>
+    </div>
+    <div class="field-row">
+      <span class="drag-h">⠿</span>
+      <div style="flex:1"><div class="field-name">Business justification <span style="color:var(--red);font-size:11px;">*</span></div><div class="field-type">Long text · min 100 chars</div></div>
+      <span class="badge b-green">Required</span>
+      <button class="icon-btn">✎</button>
+    </div>
+    <div class="field-row">
+      <span class="drag-h">⠿</span>
+      <div style="flex:1"><div class="field-name">TRM products <span style="color:var(--red);font-size:11px;">*</span></div><div class="field-type">Multi-select reference · cmdb_ci_product</div></div>
+      <span class="badge b-green">Required</span>
+      <button class="icon-btn">✎</button>
+    </div>
+    <div class="field-row">
+      <span class="drag-h">⠿</span>
+      <div style="flex:1"><div class="field-name">Architecture diagram <span style="color:var(--red);font-size:11px;">*</span></div><div class="field-type">File upload · PNG, PDF, JPEG · max 10 MB</div></div>
+      <span class="badge b-green">Required</span>
+      <button class="icon-btn">✎</button>
+    </div>
+    <div class="field-row">
+      <span class="drag-h">⠿</span>
+      <div style="flex:1"><div class="field-name">Security &amp; data governance <span style="color:var(--red);font-size:11px;">*</span></div><div class="field-type">Long text · min 100 chars</div></div>
+      <span class="badge b-green">Required</span>
+      <button class="icon-btn">✎</button>
+    </div>
+    <div class="field-row">
+      <span class="drag-h">⠿</span>
+      <div style="flex:1"><div class="field-name">Business application</div><div class="field-type">Reference · cmdb_ci_business_app</div></div>
+      <span class="badge b-gray">Optional</span>
+      <button class="icon-btn">✎</button>
+    </div>
+    <div class="field-row">
+      <span class="drag-h">⠿</span>
+      <div style="flex:1"><div class="field-name">Estimated annual cost</div><div class="field-type">Currency</div></div>
+      <span class="badge b-gray">Optional</span>
+      <button class="icon-btn">✎</button>
+    </div>
+    <div class="field-row">
+      <span class="drag-h">⠿</span>
+      <div style="flex:1"><div class="field-name">Priority</div><div class="field-type">Choice · Normal / High / Urgent</div></div>
+      <span class="badge b-gray">Optional</span>
+      <button class="icon-btn">✎</button>
+    </div>
+    <button class="btn-add-dashed">＋ Add custom field</button>
+  </div>
+
+  <div class="card">
+    <div class="slabel">4.2 — Submission document template <span class="badge b-teal" style="margin-left:6px;font-size:10px;">Pattern 2 required</span></div>
+    <div class="card-sub">Each section has a name, guidance text explaining what to include, and a required/optional setting. Guidance text is used by the EA Specialist to assess submission quality — not just presence — and is shown to submitters in Coach mode as instructional content. Required sections generate hard gate rules in Step 5.2; optional sections generate quality check flags.</div>
+
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button class="btn-outline" style="background:var(--teal-light);border-color:var(--teal);color:var(--teal);">📤 Import from existing document</button>
+      <button class="btn-outline">🔧 Build natively</button>
+    </div>
+    <div class="info green" style="margin-bottom:12px;"><div class="info-icon">✓</div><div><strong>EA Specialist extracted 7 sections</strong> from DAD_Template_v2.docx. Expand each section to review guidance text, adjust required/optional, and confirm cascade to Step 5.2.</div></div>
+
+    <div class="sec-row" id="sr-1">
+      <div class="sec-row-header" onclick="toggleSec(1)"><span class="drag-h">⠿</span><span class="sec-name-display">Business context</span><span class="sec-guide-preview">Why are we building this? Strategic drivers, problem statement, expected outcomes.</span><span class="badge b-green" style="margin-left:8px;flex-shrink:0;">Required</span><span style="font-size:10px;color:var(--ink-4);margin-left:6px;" id="sarr-1">▸</span></div>
+      <div class="sec-expand-body" id="sb-1" style="display:none;">
+        <div class="fgroup"><div class="flabel">Section name</div><input class="finput" value="Business context"></div>
+        <div class="fgroup"><div class="flabel">Guidance text <span style="font-size:11px;color:var(--ink-4);font-weight:400;">— shown to submitters and used by EA Specialist to assess quality</span></div><textarea class="finput" rows="3">Explain why this solution is being built. Include the strategic driver or problem being solved, the expected business outcome, and why this approach was chosen over alternatives. A strong business context helps the board assess alignment with architecture strategy.</textarea><div class="fhint">EA Specialist checks whether the content addresses a strategic driver and expected outcome — not just states intent.</div></div>
+        <div class="fgroup" style="margin-bottom:0;"><div class="flabel">Required / Optional</div><div style="display:flex;gap:8px;"><div class="cr sel" style="flex:1;" onclick="setSecReq(this)"><input type="radio" name="sr1" checked><div><div class="cr-label">Required</div><div class="cr-sub">EA Specialist auto-rejects if empty or off-topic. Generates hard gate in Step 5.2.</div></div></div><div class="cr" style="flex:1;" onclick="setSecReq(this)"><input type="radio" name="sr1"><div><div class="cr-label">Optional</div><div class="cr-sub">EA Specialist flags as quality check if missing or thin. Generates quality check in Step 5.2.</div></div></div></div></div>
+        <div class="sec-cascade-note">↳ Step 5.2 hard gate: "Business context — present and addresses strategic driver and expected outcome" &nbsp;<span class="prov t">Document template</span></div>
+      </div>
+    </div>
+
+    <div class="sec-row" id="sr-2">
+      <div class="sec-row-header" onclick="toggleSec(2)"><span class="drag-h">⠿</span><span class="sec-name-display">Integration points</span><span class="sec-guide-preview">All upstream/downstream systems, APIs, data contracts, and events.</span><span class="badge b-green" style="margin-left:8px;flex-shrink:0;">Required</span><span style="font-size:10px;color:var(--ink-4);margin-left:6px;" id="sarr-2">▸</span></div>
+      <div class="sec-expand-body" id="sb-2" style="display:none;">
+        <div class="fgroup"><div class="flabel">Section name</div><input class="finput" value="Integration points"></div>
+        <div class="fgroup"><div class="flabel">Guidance text</div><textarea class="finput" rows="3">List all upstream and downstream systems this solution connects to. For each, describe the integration mechanism (REST API, Kafka topic, database query, file transfer), the data exchanged, and the contract or schema in use. Missing integration details are the most common reason for review delays.</textarea><div class="fhint">EA Specialist checks that specific systems are named and integration mechanism is described — not just "will integrate with X."</div></div>
+        <div class="fgroup" style="margin-bottom:0;"><div class="flabel">Required / Optional</div><div style="display:flex;gap:8px;"><div class="cr sel" style="flex:1;" onclick="setSecReq(this)"><input type="radio" name="sr2" checked><div><div class="cr-label">Required</div><div class="cr-sub">Hard gate in Step 5.2.</div></div></div><div class="cr" style="flex:1;" onclick="setSecReq(this)"><input type="radio" name="sr2"><div><div class="cr-label">Optional</div><div class="cr-sub">Quality check in Step 5.2.</div></div></div></div></div>
+        <div class="sec-cascade-note">↳ Step 5.2 hard gate: "Integration points — names specific systems with mechanism and data contract" &nbsp;<span class="prov t">Document template</span></div>
+      </div>
+    </div>
+
+    <div class="sec-row" id="sr-3">
+      <div class="sec-row-header" onclick="toggleSec(3)"><span class="drag-h">⠿</span><span class="sec-name-display">Security &amp; compliance</span><span class="sec-guide-preview">Authentication, encryption, access control, regulatory compliance, threat model.</span><span class="badge b-green" style="margin-left:8px;flex-shrink:0;">Required</span><span style="font-size:10px;color:var(--ink-4);margin-left:6px;" id="sarr-3">▸</span></div>
+      <div class="sec-expand-body" id="sb-3" style="display:none;">
+        <div class="fgroup"><div class="flabel">Section name</div><input class="finput" value="Security &amp; compliance"></div>
+        <div class="fgroup"><div class="flabel">Guidance text</div><textarea class="finput" rows="3">Describe authentication (which identity provider), data encryption at rest and in transit, access control model, and data classification. If the solution processes PII or regulated data, state which compliance framework applies and how requirements are met.</textarea><div class="fhint">EA Specialist checks for specific security controls — not generic statements like "security will be handled appropriately."</div></div>
+        <div class="fgroup" style="margin-bottom:0;"><div class="flabel">Required / Optional</div><div style="display:flex;gap:8px;"><div class="cr sel" style="flex:1;" onclick="setSecReq(this)"><input type="radio" name="sr3" checked><div><div class="cr-label">Required</div><div class="cr-sub">Hard gate in Step 5.2.</div></div></div><div class="cr" style="flex:1;" onclick="setSecReq(this)"><input type="radio" name="sr3"><div><div class="cr-label">Optional</div><div class="cr-sub">Quality check in Step 5.2.</div></div></div></div></div>
+        <div class="sec-cascade-note">↳ Step 5.2 hard gate: "Security &amp; compliance — describes auth, encryption, access control, and data classification" &nbsp;<span class="prov t">Document template</span></div>
+      </div>
+    </div>
+
+    <div class="sec-row" id="sr-4">
+      <div class="sec-row-header" onclick="toggleSec(4)"><span class="drag-h">⠿</span><span class="sec-name-display">Data architecture</span><span class="sec-guide-preview">Data model, storage choices, classification, retention, and data flows.</span><span class="badge b-green" style="margin-left:8px;flex-shrink:0;">Required</span><span style="font-size:10px;color:var(--ink-4);margin-left:6px;" id="sarr-4">▸</span></div>
+      <div class="sec-expand-body" id="sb-4" style="display:none;">
+        <div class="fgroup"><div class="flabel">Section name</div><input class="finput" value="Data architecture"></div>
+        <div class="fgroup"><div class="flabel">Guidance text</div><textarea class="finput" rows="3">Describe the data model, storage technology choices, data classification levels, retention policy, and how data flows through the system. If data crosses domain boundaries, describe the governance model for that data.</textarea><div class="fhint">Storage technology must be explicitly named. EA Specialist flags vague statements like "we will store in a database."</div></div>
+        <div class="fgroup" style="margin-bottom:0;"><div class="flabel">Required / Optional</div><div style="display:flex;gap:8px;"><div class="cr sel" style="flex:1;" onclick="setSecReq(this)"><input type="radio" name="sr4" checked><div><div class="cr-label">Required</div><div class="cr-sub">Hard gate in Step 5.2.</div></div></div><div class="cr" style="flex:1;" onclick="setSecReq(this)"><input type="radio" name="sr4"><div><div class="cr-label">Optional</div><div class="cr-sub">Quality check in Step 5.2.</div></div></div></div></div>
+        <div class="sec-cascade-note">↳ Step 5.2 hard gate: "Data architecture — names storage technology, classification, and retention" &nbsp;<span class="prov t">Document template</span></div>
+      </div>
+    </div>
+
+    <div class="sec-row" id="sr-5">
+      <div class="sec-row-header" onclick="toggleSec(5)"><span class="drag-h">⠿</span><span class="sec-name-display">Infrastructure</span><span class="sec-guide-preview">Hosting, networking, cloud regions, IaC approach, resiliency model.</span><span class="badge b-green" style="margin-left:8px;flex-shrink:0;">Required</span><span style="font-size:10px;color:var(--ink-4);margin-left:6px;" id="sarr-5">▸</span></div>
+      <div class="sec-expand-body" id="sb-5" style="display:none;">
+        <div class="fgroup"><div class="flabel">Section name</div><input class="finput" value="Infrastructure"></div>
+        <div class="fgroup"><div class="flabel">Guidance text</div><textarea class="finput" rows="3">Describe the hosting model, cloud provider and approved regions, networking configuration, IaC approach, and resiliency model including RTO and RPO targets. Cloud region must match the approved regions list.</textarea><div class="fhint">EA Specialist specifically checks that cloud region is named and matches approved list.</div></div>
+        <div class="fgroup" style="margin-bottom:0;"><div class="flabel">Required / Optional</div><div style="display:flex;gap:8px;"><div class="cr sel" style="flex:1;" onclick="setSecReq(this)"><input type="radio" name="sr5" checked><div><div class="cr-label">Required</div><div class="cr-sub">Hard gate in Step 5.2.</div></div></div><div class="cr" style="flex:1;" onclick="setSecReq(this)"><input type="radio" name="sr5"><div><div class="cr-label">Optional</div><div class="cr-sub">Quality check in Step 5.2.</div></div></div></div></div>
+        <div class="sec-cascade-note">↳ Step 5.2 hard gate: "Infrastructure — specifies cloud region, hosting model, and resiliency approach" &nbsp;<span class="prov t">Document template</span></div>
+      </div>
+    </div>
+
+    <div class="sec-row" id="sr-6">
+      <div class="sec-row-header" onclick="toggleSec(6)"><span class="drag-h">⠿</span><span class="sec-name-display">Performance &amp; scale</span><span class="sec-guide-preview">Throughput, SLA targets, RTO/RPO, capacity plan.</span><span class="badge b-green" style="margin-left:8px;flex-shrink:0;">Required</span><span style="font-size:10px;color:var(--ink-4);margin-left:6px;" id="sarr-6">▸</span></div>
+      <div class="sec-expand-body" id="sb-6" style="display:none;">
+        <div class="fgroup"><div class="flabel">Section name</div><input class="finput" value="Performance &amp; scale"></div>
+        <div class="fgroup"><div class="flabel">Guidance text</div><textarea class="finput" rows="3">Provide expected throughput (events/sec or requests/sec), peak concurrency, availability SLA target, and a capacity plan or sizing rationale. For event-driven architectures, throughput numbers are mandatory for review.</textarea><div class="fhint">EA Specialist checks for specific throughput figures on event-driven architectures. "High throughput" will be flagged as insufficient.</div></div>
+        <div class="fgroup" style="margin-bottom:0;"><div class="flabel">Required / Optional</div><div style="display:flex;gap:8px;"><div class="cr sel" style="flex:1;" onclick="setSecReq(this)"><input type="radio" name="sr6" checked><div><div class="cr-label">Required</div><div class="cr-sub">Hard gate in Step 5.2.</div></div></div><div class="cr" style="flex:1;" onclick="setSecReq(this)"><input type="radio" name="sr6"><div><div class="cr-label">Optional</div><div class="cr-sub">Quality check in Step 5.2.</div></div></div></div></div>
+        <div class="sec-cascade-note">↳ Step 5.2 hard gate: "Performance &amp; scale — includes specific throughput figures and availability SLA" &nbsp;<span class="prov t">Document template</span></div>
+      </div>
+    </div>
+
+    <div class="sec-row" id="sr-7">
+      <div class="sec-row-header" onclick="toggleSec(7)"><span class="drag-h">⠿</span><span class="sec-name-display">Risks &amp; assumptions</span><span class="sec-guide-preview">Known risks, mitigations, open questions, deferred decisions.</span><span class="badge b-gray" style="margin-left:8px;flex-shrink:0;">Optional</span><span style="font-size:10px;color:var(--ink-4);margin-left:6px;" id="sarr-7">▸</span></div>
+      <div class="sec-expand-body" id="sb-7" style="display:none;">
+        <div class="fgroup"><div class="flabel">Section name</div><input class="finput" value="Risks &amp; assumptions"></div>
+        <div class="fgroup"><div class="flabel">Guidance text</div><textarea class="finput" rows="3">List known risks and mitigations, key assumptions the design depends on, open questions not yet resolved, and decisions explicitly deferred. Honest risk documentation is valued — it shows the submitter has thought critically about the proposal.</textarea><div class="fhint">Optional — EA Specialist flags as a quality check if absent on complex or cross-domain submissions.</div></div>
+        <div class="fgroup" style="margin-bottom:0;"><div class="flabel">Required / Optional</div><div style="display:flex;gap:8px;"><div class="cr" style="flex:1;" onclick="setSecReq(this)"><input type="radio" name="sr7"><div><div class="cr-label">Required</div><div class="cr-sub">Hard gate in Step 5.2.</div></div></div><div class="cr sel" style="flex:1;" onclick="setSecReq(this)"><input type="radio" name="sr7" checked><div><div class="cr-label">Optional</div><div class="cr-sub">Quality check in Step 5.2 if missing on complex submissions.</div></div></div></div></div>
+        <div class="sec-cascade-note" style="background:var(--amber-light);color:var(--amber);">↳ Step 5.2 quality check: "Risks &amp; assumptions — present on complex or cross-domain submissions" &nbsp;<span class="prov f">Document template · Optional</span></div>
+      </div>
+    </div>
+
+    <button class="btn-add-dashed">＋ Add section</button>
+
+    <div class="div"></div>
+    <div class="slabel">Auto-generated rules cascading to Step 5.2 <span class="badge b-green" style="margin-left:6px;">6 hard gates · 1 quality check</span></div>
+    <div class="info blue" style="margin-bottom:10px;"><div class="info-icon">ℹ</div><div>Required sections generate hard gate rules. Optional sections generate quality check flags. Click any rule in Step 5.2 to jump back to the section definition here.</div></div>
+    <div class="casc"><span class="casc-icon" style="color:var(--red);">✕</span><span class="casc-text">Business context — present and addresses strategic driver and expected outcome</span><span class="prov t">Document template · Required</span></div>
+    <div class="casc"><span class="casc-icon" style="color:var(--red);">✕</span><span class="casc-text">Integration points — names specific systems with mechanism and data contract</span><span class="prov t">Document template · Required</span></div>
+    <div class="casc"><span class="casc-icon" style="color:var(--red);">✕</span><span class="casc-text">Security &amp; compliance — describes auth, encryption, access control, and data classification</span><span class="prov t">Document template · Required</span></div>
+    <div class="casc"><span class="casc-icon" style="color:var(--red);">✕</span><span class="casc-text">Data architecture — names storage technology, classification, and retention</span><span class="prov t">Document template · Required</span></div>
+    <div class="casc"><span class="casc-icon" style="color:var(--red);">✕</span><span class="casc-text">Infrastructure — specifies cloud region, hosting model, and resiliency approach</span><span class="prov t">Document template · Required</span></div>
+    <div class="casc"><span class="casc-icon" style="color:var(--red);">✕</span><span class="casc-text">Performance &amp; scale — includes specific throughput figures and availability SLA</span><span class="prov t">Document template · Required</span></div>
+    <div class="casc"><span class="casc-icon" style="color:var(--amber);">⚠</span><span class="casc-text">Risks &amp; assumptions — present on complex or cross-domain submissions</span><span class="prov f">Document template · Optional</span></div>
+  </div>
+</div>
+
+<!-- ════════════ STEP 5.1 ══════════════════════════════════════════ -->
+<div id="s5-1" class="section">
+  <div class="eyebrow">Step 5 of 7 · EA Specialist rules</div>
+  <div class="page-title">Upload standards</div>
+  <div class="page-desc">Upload the documents the EA Specialist evaluates submissions against — your TRM catalog, integration and security standards, and architecture guidelines. These form the knowledge base for auto-approval, auto-rejection, and submitter assistance.</div>
+
+  <div class="card">
+    <div class="card-title">Standards library</div>
+    <div class="card-sub">The EA Specialist references these documents when evaluating every submission for this ARB type.</div>
+
+    <div class="file-row">
+      <div class="file-icon">📋</div>
+      <div style="flex:1"><div class="file-name">TRM Catalog &amp; Standards.pdf</div><div class="file-meta">Updated Apr 2, 2026 · 2.4 MB · 47 products · 31 Approved, 9 Conditional, 7 Retired</div></div>
+      <div class="file-right"><span class="badge b-green">Active</span><button class="icon-btn">👁</button><button class="icon-btn">🗑</button></div>
+    </div>
+    <div class="file-row">
+      <div class="file-icon doc-blue">📄</div>
+      <div style="flex:1"><div class="file-name">Integration Standards v3.2.pdf</div><div class="file-meta">Updated Mar 18, 2026 · 1.1 MB · 12 rules extracted</div></div>
+      <div class="file-right"><span class="badge b-green">Active</span><button class="icon-btn">👁</button><button class="icon-btn">🗑</button></div>
+    </div>
+    <div class="file-row">
+      <div class="file-icon">🔒</div>
+      <div style="flex:1"><div class="file-name">Security Baseline 2026.pdf</div><div class="file-meta">Updated Feb 27, 2026 · 870 KB · 18 rules extracted</div></div>
+      <div class="file-right"><span class="badge b-green">Active</span><button class="icon-btn">👁</button><button class="icon-btn">🗑</button></div>
+    </div>
+    <div class="file-row">
+      <div class="file-icon doc-green">📄</div>
+      <div style="flex:1"><div class="file-name">Architecture Guidelines.pdf</div><div class="file-meta">Updated Jan 9, 2026 · 1.6 MB · 9 rules extracted</div></div>
+      <div class="file-right"><span class="badge b-green">Active</span><button class="icon-btn">👁</button><button class="icon-btn">🗑</button></div>
+    </div>
+
+    <div style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;">
+      <button class="btn-upload">📤 Upload standard</button>
+      <div class="toggle-wrap"><label class="sw"><input type="checkbox" checked><div class="sw-track"></div><div class="sw-thumb"></div></label><span class="toggle-label">Evaluate submissions against these standards</span></div>
+    </div>
+  </div>
+
+  <div class="info blue"><div class="info-icon">💡</div><div>A best practices guide that says <em>"event-driven architectures must define schema ownership before deployment"</em> becomes a standards compliance rule once uploaded. Upload any document that contains deterministic, testable policies.</div></div>
+</div>
+
+<!-- ════════════ STEP 5.2 ══════════════════════════════════════════ -->
+<div id="s5-2" class="section">
+  <div class="eyebrow">Step 5 of 7 · EA Specialist rules</div>
+  <div class="page-title">Rules</div>
+  <div class="page-desc">The complete set of rules the EA Specialist enforces. Auto-generated from your document template (Step 4.2) and uploaded standards (Step 5.1). Review, adjust, and add plain-English rules on top.</div>
+
+  <!-- AUTOMATION TOGGLES — ALWAYS VISIBLE AT TOP -->
+  <div class="card" style="border-left:3px solid var(--teal);">
+    <div class="slabel">EA Specialist automation</div>
+    <div class="toggle-row" style="margin-bottom:8px;">
+      <label class="sw"><input type="checkbox" checked><div class="sw-track"></div><div class="sw-thumb"></div></label>
+      <div class="toggle-info"><div class="toggle-label">Enable auto-approval</div><div class="toggle-desc">When all auto-approve conditions below are met and no hard gates or quality checks fail, the EA Specialist approves without human review. Start conservative and expand coverage as confidence grows.</div></div>
+    </div>
+    <div class="toggle-row" style="margin-bottom:0;">
+      <label class="sw"><input type="checkbox" checked><div class="sw-track"></div><div class="sw-thumb"></div></label>
+      <div class="toggle-info"><div class="toggle-label">Enable auto-rejection</div><div class="toggle-desc">When a submission triggers any hard gate rule below, the EA Specialist returns it to the submitter with the specific reason before it reaches any reviewer. Submitters fix the issue and resubmit. Use hard gates only for clear, unambiguous violations.</div></div>
+    </div>
+  </div>
+
+  <!-- HARD GATES -->
+  <div class="bucket">
+    <div class="bucket-hdr bh-red" onclick="togB('br')">
+      <span class="b-icon">✕</span>
+      <span class="b-title">Hard gates — auto-reject if any fail</span>
+      <span class="badge b-red">8 rules</span>
+      <span class="chevron open" id="cbr">▾</span>
+    </div>
+    <div class="bucket-body" id="br">
+      <div class="info red" style="margin-bottom:8px;font-size:11px;"><div class="info-icon">⚠</div><div>Use hard gates only for clear, unambiguous violations. If in doubt, use a quality check instead — reviewers can still catch borderline cases without blocking submission.</div></div>
+      <div class="rule-row"><input type="checkbox" checked><span class="rule-text">TRM product has <strong>Retired</strong> status</span><span class="prov s">TRM Catalog</span></div>
+      <div class="rule-row"><input type="checkbox" checked><span class="rule-text">Business justification fewer than <strong>50 characters</strong></span><span class="prov f">Form field</span></div>
+      <div class="rule-row"><input type="checkbox" checked><span class="rule-text">Architecture diagram missing for production systems</span><span class="prov f">Form field</span></div>
+      <div class="rule-row"><input type="checkbox" checked><span class="rule-text">Business context section — empty or does not address strategic driver and expected outcome</span><span class="prov t">Document template</span></div>
+      <div class="rule-row"><input type="checkbox" checked><span class="rule-text">Integration points section — empty or does not name specific systems with mechanism and data contract</span><span class="prov t">Document template</span></div>
+      <div class="rule-row"><input type="checkbox" checked><span class="rule-text">Security &amp; compliance section — empty or lacks auth, encryption, and data classification detail</span><span class="prov t">Document template</span></div>
+      <div class="rule-row"><input type="checkbox" checked><span class="rule-text">Performance &amp; scale section — empty or lacks throughput figures for event-driven architectures</span><span class="prov t">Document template</span></div>
+      <div class="rule-row"><input type="checkbox" checked><span class="rule-text">Redis used outside approved scope (caching/session only — not message queuing)</span><span class="prov s">Integration Standards</span></div>
+      <button class="btn-add-dashed">＋ Add hard gate rule</button>
+    </div>
+  </div>
+
+  <!-- QUALITY CHECKS -->
+  <div class="bucket">
+    <div class="bucket-hdr bh-amber" onclick="togB('ba')">
+      <span class="b-icon">⚠</span>
+      <span class="b-title">Quality checks — flag for reviewer attention</span>
+      <span class="badge b-amber">5 rules</span>
+      <span class="chevron" id="cba">▾</span>
+    </div>
+    <div class="bucket-body" id="ba" style="display:none">
+      <div class="rule-row"><input type="checkbox" checked><span class="rule-text">TRM product has <strong>Conditional</strong> status</span><span class="prov s">TRM Catalog</span></div>
+      <div class="rule-row"><input type="checkbox" checked><span class="rule-text">Solution scope is cross-domain — involves 2 or more business domains</span><span class="prov s">Architecture Guidelines</span></div>
+      <div class="rule-row"><input type="checkbox" checked><span class="rule-text">Estimated cost field empty</span><span class="prov c">Custom</span></div>
+      <div class="rule-row"><input type="checkbox" checked><span class="rule-text">All external integrations must route through the API gateway</span><span class="prov s">Integration Standards</span></div>
+      <div class="rule-row"><input type="checkbox" checked><span class="rule-text">Risks &amp; assumptions section missing on complex or cross-domain submissions</span><span class="prov t">Document template · Optional</span></div>
+      <button class="btn-add-dashed">＋ Add quality check rule</button>
+    </div>
+  </div>
+
+  <!-- AUTO-APPROVE CONDITIONS -->
+  <div class="bucket">
+    <div class="bucket-hdr bh-green" onclick="togB('bg')">
+      <span class="b-icon">✓</span>
+      <span class="b-title">Auto-approve conditions — approve if ALL are true</span>
+      <span class="badge b-green">5 conditions</span>
+      <span class="chevron" id="cbg">▾</span>
+    </div>
+    <div class="bucket-body" id="bg" style="display:none">
+      <div class="info amber" style="margin-bottom:8px;font-size:11px;"><div class="info-icon">⚠</div><div>Start conservative — test in Step 7 before activating. Expand auto-approval coverage once you've seen how the EA Specialist handles real submissions.</div></div>
+      <div class="rule-row"><input type="checkbox" checked><span class="rule-text">All TRM products have <strong>Approved</strong> status</span><span class="prov s">TRM Catalog</span></div>
+      <div class="rule-row"><input type="checkbox" checked><span class="rule-text">Solution scope is single-domain</span><span class="prov s">Architecture Guidelines</span></div>
+      <div class="rule-row"><input type="checkbox" checked><span class="rule-text">All required document sections present and meet guidance quality threshold</span><span class="prov t">Document template</span></div>
+      <div class="rule-row"><input type="checkbox" checked><span class="rule-text">No security baseline violations</span><span class="prov s">Security Baseline</span></div>
+      <div class="rule-row"><input type="checkbox" checked><span class="rule-text">No quality check flags triggered</span><span class="prov c">System</span></div>
+      <button class="btn-add-dashed">＋ Add custom condition</button>
+    </div>
+  </div>
+
+  <!-- PLAIN ENGLISH with interpretation preview -->
+  <div class="plain-box">
+    <div class="plain-box-label">Add rules in plain English or paste from a .md policy document</div>
+    <div class="fhint" style="margin-bottom:8px;">Write one rule per line. Click "Preview interpretation" to see how the EA Specialist classifies each rule and which bucket it would go into — review and confirm before saving.</div>
+    <textarea class="finput" id="plain-rules" rows="4" placeholder="e.g.
+All selected TRM products must have Approved status
+Cross-domain deployments require schema ownership to be documented
+Multi-region deployments require Security team sign-off"></textarea>
+    <div style="margin-top:8px;display:flex;gap:8px;">
+      <button class="btn-primary-sm" onclick="previewRules()">Preview interpretation →</button>
+      <button class="btn-outline" onclick="document.getElementById('plain-rules').value=''">Clear</button>
+    </div>
+    <div id="rule-preview" style="display:none;margin-top:12px;">
+      <div class="slabel" style="margin-bottom:8px;">Interpretation preview — confirm before saving</div>
+      <div id="rule-preview-list"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn-primary-sm">Save to rules →</button>
+        <button class="btn-outline" onclick="document.getElementById('rule-preview').style.display='none'">Edit rules</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ STEP 5.3 ══════════════════════════════════════════ -->
+<div id="s5-3" class="section">
+  <div class="eyebrow">Step 5 of 7 · EA Specialist rules</div>
+  <div class="page-title">Submitter assistance</div>
+  <div class="page-desc">Configure how the EA Specialist engages with submitters during form entry — before the request reaches any reviewer.</div>
+
+  <div class="card">
+    <div class="slabel">1 — Assistance mode <span style="color:var(--red);font-size:11px;font-weight:600;">*</span></div>
+    <div class="grid2" style="margin-bottom:0;">
+      <div class="cr sel" id="mode-c" onclick="setMode('c')">
+        <input type="radio" name="mode" checked>
+        <div><div class="cr-label">🎓 Coach mode</div><div class="cr-sub">EA Specialist surfaces findings inline as submitters fill the form — with options to resolve before submitting.</div></div>
+      </div>
+      <div class="cr" id="mode-g" onclick="setMode('g')">
+        <input type="radio" name="mode">
+        <div><div class="cr-label">🚦 Gate mode</div><div class="cr-sub">Evaluates on submission and returns pass/fail. No inline guidance during form entry.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="findings-card">
+    <div class="slabel">2 — Findings to surface to submitters</div>
+    <div class="fhint" style="margin-bottom:14px;">Dynamically generated from your configuration in Steps 4.2, 5.1, and 5.2. Only finding types with rules behind them are shown. Grayed-out types have no rules configured yet.</div>
+
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--teal);margin-bottom:6px;margin-top:4px;">From document template (Step 4.2)</div>
+    <div class="cr"><input type="checkbox" checked><div><div class="cr-label">Document section incomplete or off-topic</div><div class="cr-sub">EA Specialist checks each required section against its guidance text. Flags sections that are empty, contain only placeholder text, or don't substantively address what the guidance asks for. Submitter sees the specific section name and what's missing.<br><em style="color:var(--ink-4);">Powered by: 6 required sections with guidance text defined in Step 4.2</em></div></div></div>
+    <div class="cr"><input type="checkbox" checked><div><div class="cr-label">Optional section absent on complex submission</div><div class="cr-sub">For optional sections (e.g. Risks &amp; assumptions), EA Specialist nudges the submitter if the submission appears complex or cross-domain but the section is missing.<br><em style="color:var(--ink-4);">Powered by: 1 optional section · quality check rule</em></div></div></div>
+
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--teal);margin-bottom:6px;margin-top:14px;">From standards library (Step 5.1)</div>
+    <div class="cr"><input type="checkbox" checked><div><div class="cr-label">TRM conflict — product choice doesn't match approved usage</div><div class="cr-sub">e.g. Redis used as message queue when only approved for caching. Submitter sees the specific TRM rule and alternative options to resolve it.<br><em style="color:var(--ink-4);">Powered by: Enterprise TRM Catalog 2026 · 47 products</em></div></div></div>
+    <div class="cr"><input type="checkbox" checked><div><div class="cr-label">Standards conflict — design violates a published standard</div><div class="cr-sub">e.g. Direct database connection bypasses the API gateway. Submitter sees the specific standard and resolution options.<br><em style="color:var(--ink-4);">Powered by: Integration Standards v3.2, Architecture Guidelines</em></div></div></div>
+
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--teal);margin-bottom:6px;margin-top:14px;">From form field configuration (Step 4.1)</div>
+    <div class="cr"><input type="checkbox" checked><div><div class="cr-label">Compliance gap — required field missing or below threshold</div><div class="cr-sub">Business justification too short, architecture diagram not uploaded, or other required form fields empty or incomplete.<br><em style="color:var(--ink-4);">Powered by: Form field configuration · 6 required fields</em></div></div></div>
+  </div>
+
+  <div class="card">
+    <div class="slabel">3 — Reference materials</div>
+    <div class="card-sub">Links shown to submitters as resource cards while they prepare their request.</div>
+    <div class="field-row"><span class="drag-h">⠿</span><div style="flex:1;"><div class="field-name">TRM Catalog &amp; standards</div><div class="field-type">View approved software and hardware standards</div></div><button class="icon-btn">✎</button><button class="icon-btn" style="color:var(--red);">✕</button></div>
+    <div class="field-row"><span class="drag-h">⠿</span><div style="flex:1;"><div class="field-name">Architecture guidelines</div><div class="field-type">Scalable best practices and design patterns</div></div><button class="icon-btn">✎</button><button class="icon-btn" style="color:var(--red);">✕</button></div>
+    <div class="field-row"><span class="drag-h">⠿</span><div style="flex:1;"><div class="field-name">Integration standards</div><div class="field-type">API specifications for enterprise systems</div></div><button class="icon-btn">✎</button><button class="icon-btn" style="color:var(--red);">✕</button></div>
+    <div class="field-row"><span class="drag-h">⠿</span><div style="flex:1;"><div class="field-name">Application catalog</div><div class="field-type">Browse registered business applications</div></div><button class="icon-btn">✎</button><button class="icon-btn" style="color:var(--red);">✕</button></div>
+    <button class="btn-add-dashed">＋ Add reference link</button>
+  </div>
+</div>
+
+<!-- ════════════ STEP 6.1 ══════════════════════════════════════════ -->
+<div id="s6-1" class="section">
+  <div class="eyebrow">Step 6 of 7 · SLAs, notifications &amp; lifecycle</div>
+  <div class="page-title">SLA configuration</div>
+  <div class="page-desc">Set the decision target submitters see and the threshold that flags requests as aging in the ARB Hub dashboard.</div>
+  <div class="card">
+    <div class="fgroup">
+      <div class="flabel">Target time to decision <span class="req">*</span></div>
+      <div class="inline-n"><input class="finput" type="number" value="7" style="width:80px;text-align:center;"><span>business days</span></div>
+      <div class="fhint">Shown to submitters on the confirmation page and used to calculate SLA compliance.</div>
+    </div>
+    <div class="fgroup" style="margin-bottom:0;">
+      <div class="flabel">Aging threshold</div>
+      <div class="inline-n"><input class="finput" type="number" value="15" style="width:80px;text-align:center;"><span>days</span></div>
+      <div class="fhint">Requests open longer appear in the "Aging &gt;15 days" metric in the ARB Hub. Not shown to submitters.</div>
+    </div>
+    <div class="info blue" style="margin-top:14px;margin-bottom:0;"><div class="info-icon">ℹ</div><div>Pre-filled defaults: Exception Request = 5 days, Detailed Technical Review = 7 days.</div></div>
+  </div>
+</div>
+
+<!-- ════════════ STEP 6.2 ══════════════════════════════════════════ -->
+<div id="s6-2" class="section">
+  <div class="eyebrow">Step 6 of 7 · SLAs, notifications &amp; lifecycle</div>
+  <div class="page-title">Condition lifecycle management</div>
+  <div class="page-desc">Govern what happens to requests approved with conditions or exceptions — from reminders through expiry, extension, and resolution.</div>
+
+  <div class="card">
+    <div class="slabel">Condition reminder schedule</div>
+    <div class="cr"><input type="checkbox" checked><div class="cr-label">60 days before expiry</div></div>
+    <div class="cr"><input type="checkbox" checked><div class="cr-label">30 days before expiry</div></div>
+    <div class="cr"><input type="checkbox" checked><div class="cr-label">14 days before expiry</div></div>
+    <div class="cr"><input type="checkbox" checked><div class="cr-label">At expiry — if not resolved</div></div>
+    <div class="cr"><input type="checkbox" checked><div class="cr-label">7 days after expiry — escalation notice</div></div>
+    <div class="div"></div>
+    <div class="slabel">Reminders sent to</div>
+    <div class="cr"><input type="checkbox" checked><div class="cr-label">Original submitter</div></div>
+    <div class="cr"><input type="checkbox"><div><div class="cr-label">Condition owner</div><div class="cr-sub">If assigned separately</div></div></div>
+    <div class="cr"><input type="checkbox"><div><div class="cr-label">Approval group</div><div class="cr-sub">Notify reviewers of pending expiry</div></div></div>
+  </div>
+
+  <div class="card">
+    <div class="slabel">Expiry handling</div>
+    <div class="card-sub">When a condition reaches expiry without resolution, what happens?</div>
+    <div class="cr sel"><input type="radio" name="exp" checked><div><div class="cr-label">Change state to Expired and notify submitter <span class="badge b-gray" style="margin-left:4px;">default</span></div></div></div>
+    <div class="cr"><input type="radio" name="exp"><div class="cr-label">Auto-escalate to approval group</div></div>
+    <div class="cr"><input type="radio" name="exp"><div><div class="cr-label">Auto-create tech debt record</div><div class="cr-sub">If tech debt module enabled</div></div></div>
+    <div class="cr"><input type="radio" name="exp"><div><div class="cr-label">Custom workflow</div><div class="cr-sub">Configure in Flow Designer</div></div></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div><div class="slabel" style="margin-bottom:2px;">Extension requests</div><div class="fhint">Let submitters request more time for expiring conditions.</div></div>
+      <label class="sw"><input type="checkbox" checked id="ext-sw" onchange="togExt()"><div class="sw-track"></div><div class="sw-thumb"></div></label>
+    </div>
+    <div id="ext-opts">
+      <div class="slabel">Extension approval</div>
+      <div class="cr sel"><input type="radio" name="extap" checked><div class="cr-label">Auto-approve up to 90 additional days</div></div>
+      <div class="cr"><input type="radio" name="extap"><div class="cr-label">Require approval from original group</div></div>
+      <div class="cr"><input type="radio" name="extap"><div class="cr-label">Require approval from specific user or group</div></div>
+      <div class="grid2" style="margin-top:12px;">
+        <div class="fgroup"><div class="flabel">Max extensions allowed</div><div class="inline-n"><input class="finput" type="number" value="2" style="width:64px;text-align:center;"><span>per condition</span></div></div>
+        <div class="fgroup"><div class="flabel">Max total duration</div><div class="inline-n"><input class="finput" type="number" value="365" style="width:64px;text-align:center;"><span>days</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="slabel">Resolution options</div>
+    <div class="cr"><input type="checkbox" checked><div><div class="cr-label">Require resolution comment — explain how resolved</div></div></div>
+    <div class="cr"><input type="checkbox"><div><div class="cr-label">Require evidence upload — proof of completion</div><div class="cr-sub">Recommended for Pattern 1 exception requests</div></div></div>
+    <div class="cr"><input type="checkbox" checked><div class="cr-label">Notify approval group on resolution</div></div>
+    <div class="cr"><input type="checkbox"><div><div class="cr-label">Require reviewer verification — reviewer must confirm</div></div></div>
+    <div class="div"></div>
+    <div class="slabel">Condition ownership</div>
+    <div class="cr sel"><input type="radio" name="co" checked><div><div class="cr-label">Original submitter <span class="badge b-gray" style="margin-left:4px;">default</span></div></div></div>
+    <div class="cr"><input type="radio" name="co"><div><div class="cr-label">Assign to specific owner</div><div class="cr-sub">Adds an owner field on the condition entry form</div></div></div>
+    <div class="cr"><input type="radio" name="co"><div class="cr-label">Assign to approval group</div></div>
+  </div>
+
+  <div class="card">
+    <div class="slabel">What should the lifecycle states be called?</div>
+    <div class="card-sub">Rename the display labels — database values stay the same.</div>
+    <div class="state-grid">
+      <div class="state-item"><div class="state-db">Active state</div><input class="finput" value="Active"><div class="fhint">Condition is in effect.</div></div>
+      <div class="state-item"><div class="state-db">Expired state</div><input class="finput" value="Expired"><div class="fhint">Date passed without resolution.</div></div>
+      <div class="state-item"><div class="state-db">Resolved state</div><input class="finput" value="Resolved"><div class="fhint">Submitter met the condition.</div></div>
+      <div class="state-item"><div class="state-db">Closed state</div><input class="finput" value="Closed"><div class="fhint">Final terminal state.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ STEP 6.3 ══════════════════════════════════════════ -->
+<div id="s6-3" class="section">
+  <div class="eyebrow">Step 6 of 7 · SLAs, notifications &amp; lifecycle</div>
+  <div class="page-title">Notification email content</div>
+  <div class="page-desc">Customise the 6 notification templates sent across the review lifecycle for this ARB type. Each template has an editable subject and body with variable support.</div>
+
+  <div class="notif-item">
+    <div class="notif-hdr" onclick="togN('n1')"><div class="notif-num">1</div><div class="notif-name">Request submitted</div><div class="notif-when">Sent to: Submitter · on request creation</div><span style="font-size:12px;color:var(--ink-4);">▾</span></div>
+    <div class="notif-body" id="n1">
+      <div class="fgroup"><div class="flabel">Subject</div><input class="finput" value="ARB Request {request_id} submitted — {arb_type_name}"></div>
+      <div class="fgroup"><textarea class="finput" rows="4">Your ARB request has been received and is being reviewed.
+
+Request: {request_title} ({request_id}) · Type: {arb_type_name}
+Expected decision: within {sla_days} business days
+Track your request: {link_to_request}
+
+Questions? {arb_team_contact}</textarea></div>
+      <div class="fhint">Variables: <span class="vchip">{request_id}</span> <span class="vchip">{request_title}</span> <span class="vchip">{arb_type_name}</span> <span class="vchip">{sla_days}</span> <span class="vchip">{link_to_request}</span> <span class="vchip">{arb_team_contact}</span></div>
+      <div style="display:flex;gap:8px;margin-top:10px;"><button class="btn-outline">Preview with sample</button><button class="btn-outline">Revert to default</button></div>
+    </div>
+  </div>
+  <div class="notif-item">
+    <div class="notif-hdr" onclick="togN('n2')"><div class="notif-num">2</div><div class="notif-name">Request assigned to board</div><div class="notif-when">Sent to: Approval group · when routed for review</div><span style="font-size:12px;color:var(--ink-4);">▾</span></div>
+    <div class="notif-body" id="n2" style="display:none">
+      <div class="fgroup"><div class="flabel">Subject</div><input class="finput" value="New ARB request — {request_id} · Needs your review"></div>
+      <div class="fhint">Variables: <span class="vchip">{request_id}</span> <span class="vchip">{request_title}</span> <span class="vchip">{submitter_name}</span> <span class="vchip">{priority_level}</span> <span class="vchip">{link_to_request}</span></div>
+      <div style="display:flex;gap:8px;margin-top:10px;"><button class="btn-outline">Preview with sample</button><button class="btn-outline">Revert to default</button></div>
+    </div>
+  </div>
+  <div class="notif-item">
+    <div class="notif-hdr" onclick="togN('n3a')"><div class="notif-num">3a</div><div class="notif-name">Decision — Approved</div><div class="notif-when">Sent to: Submitter · on approval (with or without conditions)</div><span style="font-size:12px;color:var(--ink-4);">▾</span></div>
+    <div class="notif-body" id="n3a" style="display:none">
+      <div class="info blue" style="margin-bottom:10px;"><div class="info-icon">ℹ</div><div>When approved with conditions, includes condition text, expiry date, and responsibility statement. When approved without conditions, that section is empty.</div></div>
+      <div class="fgroup"><div class="flabel">Subject</div><input class="finput" value="ARB Request {request_id} — Decision: Approved"></div>
+      <div class="fhint">Variables: <span class="vchip">{request_id}</span> <span class="vchip">{decision_date}</span> <span class="vchip">{condition_text}</span> <span class="vchip">{condition_expiry_date}</span> <span class="vchip">{link_to_request}</span></div>
+      <div style="display:flex;gap:8px;margin-top:10px;"><button class="btn-outline">Preview with sample</button><button class="btn-outline">Revert to default</button></div>
+    </div>
+  </div>
+  <div class="notif-item">
+    <div class="notif-hdr" onclick="togN('n3b')"><div class="notif-num">3b</div><div class="notif-name">Decision — Rejected</div><div class="notif-when">Sent to: Submitter · on rejection</div><span style="font-size:12px;color:var(--ink-4);">▾</span></div>
+    <div class="notif-body" id="n3b" style="display:none">
+      <div class="fgroup"><div class="flabel">Subject</div><input class="finput" value="ARB Request {request_id} — Decision: Rejected"></div>
+      <div class="fhint">Variables: <span class="vchip">{rejection_reason}</span> <span class="vchip">{request_id}</span> <span class="vchip">{arb_team_contact}</span> <span class="vchip">{link_to_request}</span></div>
+      <div style="display:flex;gap:8px;margin-top:10px;"><button class="btn-outline">Preview with sample</button><button class="btn-outline">Revert to default</button></div>
+    </div>
+  </div>
+  <div class="notif-item">
+    <div class="notif-hdr" onclick="togN('n4')"><div class="notif-num">4</div><div class="notif-name">Condition reminder</div><div class="notif-when">Sent to: Submitter · at each configured reminder interval</div><span style="font-size:12px;color:var(--ink-4);">▾</span></div>
+    <div class="notif-body" id="n4" style="display:none">
+      <div class="fgroup"><div class="flabel">Subject</div><input class="finput" value="Action required — ARB condition expiring in {days_remaining} days"></div>
+      <div class="fhint">Variables: <span class="vchip">{condition_text}</span> <span class="vchip">{condition_expiry_date}</span> <span class="vchip">{days_remaining}</span> <span class="vchip">{link_to_request}</span></div>
+      <div style="display:flex;gap:8px;margin-top:10px;"><button class="btn-outline">Preview with sample</button><button class="btn-outline">Revert to default</button></div>
+    </div>
+  </div>
+  <div class="notif-item">
+    <div class="notif-hdr" onclick="togN('n5')"><div class="notif-num">5</div><div class="notif-name">Condition expired</div><div class="notif-when">Sent to: Submitter · when expiry passes without resolution</div><span style="font-size:12px;color:var(--ink-4);">▾</span></div>
+    <div class="notif-body" id="n5" style="display:none">
+      <div class="fgroup"><div class="flabel">Subject</div><input class="finput" value="ARB condition expired — {request_id} · Action required"></div>
+      <div class="fhint">Variables: <span class="vchip">{condition_text}</span> <span class="vchip">{condition_expiry_date}</span> <span class="vchip">{link_to_request}</span> <span class="vchip">{arb_team_contact}</span></div>
+      <div style="display:flex;gap:8px;margin-top:10px;"><button class="btn-outline">Preview with sample</button><button class="btn-outline">Revert to default</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ STEP 7 ════════════════════════════════════════════ -->
+<div id="s7" class="section">
+  <div class="eyebrow">Step 7 of 7</div>
+  <div class="page-title">Review &amp; activate</div>
+  <div class="page-desc">See your complete decision logic, test it against sample submissions, and activate when you're confident it's correct. The Activate button unlocks after running at least one test.</div>
+
+  <!-- Decision logic summary -->
+  <div class="slabel" style="margin-bottom:8px;">Decision logic <span style="color:var(--ink-4);font-size:11px;font-weight:400;margin-left:4px;">click any rule to edit it</span></div>
+  <div class="ds-block">
+    <div class="ds-hdr r"><span style="font-size:15px;">✕</span><span class="ds-hdr-title">Auto-reject if any of these are true</span><span class="badge b-red">6 rules</span></div>
+    <div class="ds-body">
+      <div class="ds-row" onclick="show('s5-2')"><span class="ds-icon" style="color:var(--red);">✕</span><span class="ds-text">TRM product has Retired status</span><span class="prov s">TRM Catalog</span><span class="ds-link">Edit</span></div>
+      <div class="ds-row" onclick="show('s5-2')"><span class="ds-icon" style="color:var(--red);">✕</span><span class="ds-text">Business justification fewer than 50 characters</span><span class="prov f">Form field</span><span class="ds-link">Edit</span></div>
+      <div class="ds-row" onclick="show('s5-2')"><span class="ds-icon" style="color:var(--red);">✕</span><span class="ds-text">Architecture diagram missing for production systems</span><span class="prov f">Form field</span><span class="ds-link">Edit</span></div>
+      <div class="ds-row" onclick="show('s4')"><span class="ds-icon" style="color:var(--red);">✕</span><span class="ds-text">Integration points section empty or missing</span><span class="prov t">Document template</span><span class="ds-link">Edit</span></div>
+      <div class="ds-row" onclick="show('s4')"><span class="ds-icon" style="color:var(--red);">✕</span><span class="ds-text">Security &amp; compliance section empty or missing</span><span class="prov t">Document template</span><span class="ds-link">Edit</span></div>
+      <div class="ds-row" onclick="show('s5-2')"><span class="ds-icon" style="color:var(--red);">✕</span><span class="ds-text">Redis used outside approved scope</span><span class="prov s">Integration Standards</span><span class="ds-link">Edit</span></div>
+    </div>
+  </div>
+  <div class="ds-block">
+    <div class="ds-hdr a"><span style="font-size:15px;">⚠</span><span class="ds-hdr-title">Flag for reviewer attention if any of these are true</span><span class="badge b-amber">4 rules</span></div>
+    <div class="ds-body">
+      <div class="ds-row" onclick="show('s5-2')"><span class="ds-icon" style="color:var(--amber);">⚠</span><span class="ds-text">TRM product has Conditional status</span><span class="prov s">TRM Catalog</span><span class="ds-link">Edit</span></div>
+      <div class="ds-row" onclick="show('s5-2')"><span class="ds-icon" style="color:var(--amber);">⚠</span><span class="ds-text">Solution scope is cross-domain</span><span class="prov s">Architecture Guidelines</span><span class="ds-link">Edit</span></div>
+      <div class="ds-row" onclick="show('s5-2')"><span class="ds-icon" style="color:var(--amber);">⚠</span><span class="ds-text">Estimated cost field empty</span><span class="prov c">Custom</span><span class="ds-link">Edit</span></div>
+      <div class="ds-row" onclick="show('s5-2')"><span class="ds-icon" style="color:var(--amber);">⚠</span><span class="ds-text">All external integrations must route through the API gateway</span><span class="prov s">Integration Standards</span><span class="ds-link">Edit</span></div>
+    </div>
+  </div>
+  <div class="ds-block" style="margin-bottom:20px;">
+    <div class="ds-hdr g"><span style="font-size:15px;">✓</span><span class="ds-hdr-title">Auto-approve if ALL of these are true</span><span class="badge b-green">4 conditions</span></div>
+    <div class="ds-body">
+      <div class="ds-row"><span class="ds-icon" style="color:var(--green);">✓</span><span class="ds-text">No hard gate rules triggered</span><span class="prov s">All standards</span></div>
+      <div class="ds-row" onclick="show('s5-2')"><span class="ds-icon" style="color:var(--green);">✓</span><span class="ds-text">All TRM products have Approved status</span><span class="prov s">TRM Catalog</span><span class="ds-link">Edit</span></div>
+      <div class="ds-row" onclick="show('s5-2')"><span class="ds-icon" style="color:var(--green);">✓</span><span class="ds-text">Solution scope is single-domain</span><span class="prov s">Architecture Guidelines</span><span class="ds-link">Edit</span></div>
+      <div class="ds-row" onclick="show('s4')"><span class="ds-icon" style="color:var(--green);">✓</span><span class="ds-text">All required document sections present and non-empty</span><span class="prov t">Document template</span><span class="ds-link">Edit</span></div>
+    </div>
+  </div>
+
+  <!-- Test panel -->
+  <div class="slabel" style="margin-bottom:8px;">Test the EA Specialist <span class="badge b-amber" style="margin-left:6px;">run at least one test to unlock Activate</span></div>
+  <div class="test-grid">
+    <div class="test-left">
+      <div style="font-size:12px;font-weight:600;color:var(--ink);margin-bottom:8px;">Sample submission</div>
+      <div style="margin-bottom:10px;">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-4);margin-bottom:4px;">Quick scenarios</div>
+        <button class="test-scenario-btn" onclick="loadSc('clean')">✓ Clean passing case</button>
+        <button class="test-scenario-btn" onclick="loadSc('reject')">✕ Hard reject case</button>
+        <button class="test-scenario-btn" onclick="loadSc('board')">⚠ Borderline — goes to board</button>
+      </div>
+      <textarea class="finput" id="ti" rows="8" placeholder="Describe an architecture proposal. The EA Specialist evaluates it against all configured rules and shows full reasoning…"></textarea>
+      <button class="btn-primary-sm" style="width:100%;justify-content:center;margin-top:8px;padding:9px;" onclick="runT()">Run test →</button>
+    </div>
+    <div class="test-right" id="test-right">
+      <div style="font-size:12px;font-weight:600;color:var(--ink);margin-bottom:8px;">EA Specialist evaluation</div>
+      <div id="te" style="text-align:center;padding:28px 10px;color:var(--ink-4);font-size:12px;"><div style="font-size:28px;margin-bottom:6px;">🔬</div>Run a test to see the evaluation</div>
+      <div id="tr" style="display:none">
+        <div style="display:flex;gap:4px;margin-bottom:10px;">
+          <button class="vt-btn active" id="vb-r" onclick="sv('r')">Reviewer view</button>
+          <button class="vt-btn" id="vb-s" onclick="sv('s')">Submitter view</button>
+        </div>
+        <div id="vr">
+          <div id="td-box" class="td-box rej"><span id="td-ic" style="font-size:18px;">✕</span><div><div id="td-lb" style="font-size:13px;font-weight:700;"></div><div id="td-rs" style="font-size:12px;opacity:.75;"></div></div></div>
+          <div id="tf-list"></div>
+        </div>
+        <div id="vs" style="display:none"><div style="background:var(--gray-f);border-radius:var(--r);padding:12px;font-size:12px;color:var(--ink-2);" id="sv-txt"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activate -->
+  <div class="act-panel" style="margin-top:20px;">
+    <h3>Ready to activate?</h3>
+    <p>Once activated, this ARB type appears in the submission form immediately. Test with a real submission before announcing to your organisation.</p>
+    <div class="act-actions">
+      <button class="btn-act-draft">Save as draft</button>
+      <button class="btn-act-main" id="act-btn" onclick="doActivate()">Activate ARB type</button>
+    </div>
+    <div class="act-hint" id="act-hint">Run at least one test above to enable Activate.</div>
+  </div>
+</div>
+
+    </div><!-- /content-inner -->
+  </div><!-- /content-scroll -->
+
+  <!-- Bottom nav -->
+  <div class="bottom-bar">
+    <button class="btn-back" id="bb-back" onclick="navBack()">‹ Back</button>
+    <button class="btn-next" id="bb-next" onclick="navNext()">Next ›</button>
+  </div>
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ── ROUTING MAP ──────────────────────────────────────────────────────
+const ORDER = ['s1','s2','s3','s4','s5-1','s5-2','s5-3','s6-1','s6-2','s6-3','s7'];
+const STEP_PARENT = {'s5-1':5,'s5-2':5,'s5-3':5,'s6-1':6,'s6-2':6,'s6-3':6};
+const SUBMAP = {'s5-1':'nav5-1','s5-2':'nav5-2','s5-3':'nav5-3','s6-1':'nav6-1','s6-2':'nav6-2','s6-3':'nav6-3'};
+const STEP_NAV = {'s1':'nav1','s2':'nav2','s3':'nav3','s4':'nav4','s5-1':'nav5','s5-2':'nav5','s5-3':'nav5','s6-1':'nav6','s6-2':'nav6','s6-3':'nav6','s7':'nav7'};
+let cur = 's1';
+let tested = false;
+
+function show(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+
+  // Clear nav active states
+  document.querySelectorAll('.nav-step').forEach(n => { n.classList.remove('active'); });
+  document.querySelectorAll('.sub-step').forEach(n => n.classList.remove('active'));
+
+  // Set parent step active
+  const pNav = STEP_NAV[id];
+  if (pNav) { const el = document.getElementById(pNav); if(el) el.classList.add('active'); }
+
+  // Set sub-step active
+  const sNav = SUBMAP[id];
+  if (sNav) { const el = document.getElementById(sNav); if(el) el.classList.add('active'); }
+
+  // Show sub-navs for step 5 and 6
+  document.getElementById('sub5').style.display = (id.startsWith('s5')) ? 'block' : 'block';
+  document.getElementById('sub6').style.display = (id.startsWith('s6')) ? 'block' : 'block';
+
+  // Update circle states
+  updateCircles(id);
+
+  // Back/Next visibility
+  const idx = ORDER.indexOf(id);
+  document.getElementById('bb-back').style.visibility = idx > 0 ? 'visible' : 'hidden';
+  document.getElementById('bb-next').style.display = id === 's7' ? 'none' : 'flex';
+
+  cur = id;
+  window.scrollTo(0,0);
+  const scroll = document.querySelector('.content-scroll');
+  if(scroll) scroll.scrollTop = 0;
+}
+
+function updateCircles(id) {
+  const idx = ORDER.indexOf(id);
+  // Steps 1-4 are always done (green checkmarks in sidebar)
+  // For steps 5, 6, 7 — update circle appearance
+  const sc5 = document.getElementById('sc5');
+  const sc6 = document.getElementById('sc6');
+  const sc7 = document.getElementById('sc7');
+  const sn5 = document.getElementById('sn5');
+  const sn6 = document.getElementById('sn6');
+
+  if(id.startsWith('s5') || idx > ORDER.indexOf('s5-3')) {
+    sc5.style.borderColor = 'var(--teal)'; sc5.style.color = 'var(--teal)';
+  }
+  if(id.startsWith('s6') || id === 's7') {
+    sc6.style.borderColor = 'var(--teal)'; sc6.style.color = 'var(--teal)';
+  }
+  if(id === 's7') {
+    sc7.style.borderColor = 'var(--teal)'; sc7.style.color = 'var(--teal)';
+  }
+
+  // Sub-circles
+  const subOrder = ['s5-1','s5-2','s5-3','s6-1','s6-2','s6-3'];
+  subOrder.forEach((sid, i) => {
+    const navId = SUBMAP[sid];
+    const circle = document.getElementById('ss'+sid.replace('-','').replace('s',''));
+    // simpler — just mark as active-c if it's current
+  });
+  // Mark active sub-circle
+  ['s5-1','s5-2','s5-3','s6-1','s6-2','s6-3'].forEach(sid => {
+    const nm = 'ss' + sid.replace('s','').replace('-','');
+    const el = document.getElementById(nm);
+    if(!el) return;
+    if(sid === id) { el.className = 'sub-circle active-c'; }
+    else { el.className = 'sub-circle'; }
+  });
+}
+
+function navNext() {
+  const idx = ORDER.indexOf(cur);
+  if(idx < ORDER.length - 1) show(ORDER[idx+1]);
+}
+function navBack() {
+  const idx = ORDER.indexOf(cur);
+  if(idx > 0) show(ORDER[idx-1]);
+}
+
+// Step collapse toggles
+function toggleStep(n) {
+  const sub = document.getElementById('sub'+n);
+  const ch  = document.getElementById('ch'+n);
+  const open = sub.style.display !== 'none';
+  sub.style.display = open ? 'none' : 'block';
+  ch.classList.toggle('open', !open);
+}
+
+// Bucket toggle
+function togB(id) {
+  const b = document.getElementById(id);
+  const ch = document.getElementById('c'+id);
+  const hidden = b.style.display === 'none';
+  b.style.display = hidden ? 'block' : 'none';
+  if(ch) ch.classList.toggle('open', hidden);
+}
+
+// Notification accordion
+function togN(id) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// Extension toggle
+function togExt() {
+  const on = document.getElementById('ext-sw').checked;
+  document.getElementById('ext-opts').style.display = on ? 'block' : 'none';
+}
+
+// Approval option — scoped to tier
+function selAp(el) {
+  const name = el.querySelector('input[type=radio]').name;
+  document.querySelectorAll('[name='+name+']').forEach(r => r.closest('.ap-opt').classList.remove('selected'));
+  el.classList.add('selected');
+  el.querySelector('input').checked = true;
+}
+
+// Expandable doc template sections
+function toggleSec(n) {
+  const body = document.getElementById('sb-'+n);
+  const row  = document.getElementById('sr-'+n);
+  const arr  = document.getElementById('sarr-'+n);
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  row.classList.toggle('expanded', !open);
+  if(arr) arr.textContent = open ? '▸' : '▾';
+}
+
+// Section required/optional radio
+function setSecReq(el) {
+  const name = el.querySelector('input[type=radio]').name;
+  document.querySelectorAll('[name='+name+']').forEach(r => r.closest('.cr').classList.remove('sel'));
+  el.classList.add('sel');
+  el.querySelector('input[type=radio]').checked = true;
+}
+
+// Plain-English rule interpretation preview
+function previewRules() {
+  const text = document.getElementById('plain-rules').value.trim();
+  if(!text) return;
+  const lines = text.split('\n').filter(l => l.trim());
+  const list = document.getElementById('rule-preview-list');
+  list.innerHTML = lines.map(line => {
+    const isGate = /must not|never|prohibited|not permitted|only allowed/i.test(line);
+    const bucket = isGate ? 'Hard gate (auto-reject)' : 'Quality check (flag)';
+    const cls = isGate ? 'b-red' : 'b-amber';
+    const col = isGate ? 'var(--red-light)' : 'var(--amber-light)';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;background:${col};margin-bottom:4px;"><span style="flex:1;font-size:13px;color:var(--ink-2);">${line}</span><span class="badge ${cls}">${bucket}</span><span class="prov c">Custom</span></div>`;
+  }).join('');
+  document.getElementById('rule-preview').style.display = 'block';
+}
+
+// Mode
+function setMode(m) {
+  document.getElementById('mode-c').classList.toggle('sel', m==='c');
+  document.getElementById('mode-g').classList.toggle('sel', m==='g');
+  document.getElementById('mode-c').querySelector('input').checked = m==='c';
+  document.getElementById('mode-g').querySelector('input').checked = m==='g';
+  document.getElementById('findings-card').style.display = m==='c' ? 'block' : 'none';
+}
+
+// Template select
+function selectTemplate(el) {
+  document.querySelectorAll('.template-card').forEach(e=>e.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// Test scenarios
+const SCS = {
+  clean: 'Real-time order processing service using Apache Kafka for event streaming and PostgreSQL for persistence. Single-domain scope — Order Management only. All integrations route through the API gateway. Business context, integration points, security, data architecture, infrastructure, and performance sections fully documented. Estimated cost: $120K/yr. Throughput: 8K events/sec. No cross-domain dependencies.',
+  reject: 'Analytics dashboard reads directly from the production PostgreSQL database, bypassing the API gateway. Using Redis for message queuing between services. Business justification: needs to be fast. No architecture diagram attached.',
+  board: 'New Kafka-based integration connecting Order Management, Inventory, and Fulfilment domains. All TRM products Approved. Full documentation complete. Solution spans 3 business domains. Estimated cost: $180K/yr. Schema ownership across shared event topics not yet defined.'
+};
+function loadSc(k) { document.getElementById('ti').value = SCS[k]; }
+
+function runT() {
+  const inp = document.getElementById('ti').value.trim();
+  if(!inp) return;
+  let outcome, findings;
+  const isClean = inp.includes('API gateway') && !inp.includes('bypass') && !inp.includes('Redis for message') && !inp.includes('No architecture');
+  const isReject = inp.includes('bypass') || inp.includes('Redis for message') || inp.includes('No architecture diagram');
+
+  if(isClean && !isReject) {
+    outcome='approve';
+    findings=[
+      {i:'✓',c:'var(--green)',t:'TRM Compliance — Passed',d:'Apache Kafka ✓ Approved · PostgreSQL ✓ Approved. All products match TRM status.'},
+      {i:'✓',c:'var(--green)',t:'Documentation Accuracy — Passed',d:'All 7 required document sections present and non-empty. Architecture diagram uploaded.'},
+      {i:'✓',c:'var(--green)',t:'Standards Compliance — Passed',d:'No API gateway bypass detected. Single-domain scope confirmed. No Redis misuse.'},
+    ];
+  } else if(isReject) {
+    outcome='reject';
+    findings=[
+      {i:'✕',c:'var(--red)',t:'Hard gate triggered — Redis misuse',d:'Redis detected as message queue. TRM standard: Redis approved for caching/session only. Source: Integration Standards v3.2.'},
+      {i:'✕',c:'var(--red)',t:'Hard gate triggered — Architecture diagram missing',d:'Required for all production systems. Source: Form field configuration.'},
+      {i:'✕',c:'var(--red)',t:'Standards conflict — API gateway bypass',d:'Direct database connection from analytics bypasses API gateway — violates Integration Standard #12.'},
+    ];
+  } else {
+    outcome='board';
+    findings=[
+      {i:'✓',c:'var(--green)',t:'TRM Compliance — Passed',d:'All products have Approved status.'},
+      {i:'✓',c:'var(--green)',t:'Documentation Accuracy — Passed',d:'All required sections present.'},
+      {i:'⚠',c:'var(--amber)',t:'Quality check — Cross-domain scope flagged',d:'Solution spans 3 business domains (Order Management, Inventory, Fulfilment). Schema ownership not documented. Source: Architecture Guidelines.'},
+    ];
+  }
+
+  const tdBox = document.getElementById('td-box');
+  tdBox.className = 'td-box ' + (outcome==='approve'?'app':outcome==='reject'?'rej':'brd');
+  document.getElementById('td-ic').textContent = outcome==='approve'?'✓':outcome==='reject'?'✕':'⚠';
+  document.getElementById('td-lb').textContent = outcome==='approve'?'Auto-approved':outcome==='reject'?'Auto-rejected':'Sent to approval board';
+  document.getElementById('td-rs').textContent = outcome==='approve'?'All conditions met — no human review needed.':outcome==='reject'?'Hard gate failed — returned to submitter with reason.':'Passed hard gates, quality checks flagged items needing judgment.';
+  document.getElementById('tf-list').innerHTML = findings.map(f=>`<div class="tf"><div class="tf-icon" style="color:${f.c}">${f.i}</div><div><div class="tf-title" style="color:${f.c}">${f.t}</div><div class="tf-detail">${f.d}</div></div></div>`).join('');
+
+  const sv = outcome==='reject'
+    ? '<strong style="color:var(--red)">Your submission could not proceed.</strong><br><br>Issues found:<br><br>'+findings.filter(x=>x.c==='var(--red)').map(x=>`• ${x.d}`).join('<br>')+'<br><br>Fix these and resubmit.'
+    : outcome==='approve'
+    ? '<strong style="color:var(--green)">✓ Your request has been auto-approved.</strong><br><br>All standards checks passed. A confirmation has been sent.'
+    : '<strong style="color:var(--amber)">⚠ Your request has been submitted for review.</strong><br><br>Flagged for reviewer attention:<br><br>'+findings.filter(x=>x.c==='var(--amber)').map(x=>`• ${x.d}`).join('<br>');
+  document.getElementById('sv-txt').innerHTML = sv;
+
+  document.getElementById('te').style.display='none';
+  document.getElementById('tr').style.display='block';
+
+  if(!tested) {
+    tested=true;
+    document.getElementById('act-btn').classList.add('ready');
+    document.getElementById('act-hint').textContent='Test complete — Activate is now available.';
+    document.getElementById('top-activate').classList.add('ready');
+  }
+}
+
+function sv(v) {
+  document.getElementById('vr').style.display = v==='r'?'block':'none';
+  document.getElementById('vs').style.display = v==='s'?'block':'none';
+  document.getElementById('vb-r').className = 'vt-btn'+(v==='r'?' active':'');
+  document.getElementById('vb-s').className = 'vt-btn'+(v==='s'?' active':'');
+}
+
+function doActivate() {
+  if(!tested) return;
+  alert('✓ ARB type activated!\n\nIt is now live and available in the submission form.\n\nNext: test with a real submission before announcing to your organisation.');
+}
+
+// Init
+show('s5-1');
+</script>
+</body>
+</html>
